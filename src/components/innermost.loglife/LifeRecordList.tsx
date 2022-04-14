@@ -92,62 +92,50 @@ function LifeRecordListItem(props:any){
     return(
         <CardActionArea sx={{borderRadius:2,height:'100%'}}>{/*to fit max height of grids same line*/}
         <Paper sx={{ display: 'flex',borderRadius:2 ,background:gradient,height:'100%'}}>{/*to fit height of CardActionArea */}
-            <Grid container pb={1} spacing={1}>{/*flex-end makes create time in same position of one line items */}
-                <Grid item xs={12}>
-                    <Grid item xs={10}>
+            <Grid container pb={1} spacing={1} alignItems='flex-end'>
+                <Grid item xs={10}>
                     <Typography variant="subtitle1" noWrap fontFamily={'YouYuan'} pt={1} pl={1}>
                         这是一个标题你们知道吗真的真的真的真的
                     </Typography>
-                    </Grid>
-                    <Container sx={{mt:1}}>
-                        <Grid item xs={12}>
-                                <Typography 
-                                    variant="body2" 
-                                    paragraph
-                                    color='#DCDCDC'
-                                    fontWeight='bold'
-                                    fontFamily={'Cascadia Code'}
-                                    sx={{
-                                        display: '-webkit-box',
-                                        overflow: 'hidden',
-                                        WebkitBoxOrient: 'vertical',
-                                        WebkitLineClamp: 4,
-                                    }}
-                                >{/*sx identify max lines */}
-                                    二手摩托尾气臭黑痞老板的电脑老婆凯伦用量子技术弄出了分子超黑超略吧热狗破解RSA加密算法，使瑜典二手摩托启动量子纠缠特性，导致我放在家里的麻辣火锅底料量子衰变成为番茄火锅底料，随后被我煮掉吃了并被量子衰变给影响，从而导致我代码写不出来去扫厕所，偶然发现马桶蓝月亮的蓝色很漂亮，于是骑车来到海边导致腿好酸，吃了碗拌面清汤忘记放醋，结果猪油太油，使拌面表面产生超滑平面，使空气里的一个中子一不小心滑倒了而引起了链式反应时空扭曲，使我自行车被吞没最终找不到女朋友
-                                </Typography>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <LifeRecordListItemTags/>
-                        </Grid>
-                    </Container>
                 </Grid>
-                <Grid container alignItems='flex-end'>
+
                 <Container sx={{mt:1}}>
-                    
+                    <Grid item xs={12}>
+                            <Typography 
+                                variant="body2" 
+                                paragraph
+                                color='#DCDCDC'
+                                fontWeight='bold'
+                                fontFamily={'Cascadia Code'}
+                                sx={{
+                                    display: '-webkit-box',
+                                    overflow: 'hidden',
+                                    WebkitBoxOrient: 'vertical',
+                                    WebkitLineClamp: 4,
+                                }}
+                            >{/*sx identify max lines */}
+                                二手摩托尾气臭黑痞老板的电脑老婆凯伦用量子技术弄出了分子超黑超略吧热狗破解RSA加密算法，使瑜典二手摩托启动量子纠缠特性，导致我放在家里的麻辣火锅底料量子衰变成为番茄火锅底料，随后被我煮掉吃了并被量子衰变给影响，从而导致我代码写不出来去扫厕所，偶然发现马桶蓝月亮的蓝色很漂亮，于是骑车来到海边导致腿好酸，吃了碗拌面清汤忘记放醋，结果猪油太油，使拌面表面产生超滑平面，使空气里的一个中子一不小心滑倒了而引起了链式反应时空扭曲，使我自行车被吞没最终找不到女朋友
+                            </Typography>
+                    </Grid>
                     <Grid container item xs={12}>
-                        
-                        <Grid container item xs={12} justifyContent='right'>
-                            <Typography variant='caption' color={extraInfomationColor}>
-                                📌 南京工业大学
-                            </Typography>
-                        </Grid>
-
-                        <Grid container item xs={12} justifyContent='right'>
-                            <Typography variant='caption' color={extraInfomationColor}>
-                                🎧 借口-周杰伦
-                            </Typography>
-                        </Grid>
-
-                        <Grid container item xs={12} justifyContent='right'>
-                            <Typography variant='caption' color={extraInfomationColor} fontFamily={'Cascadia Code'}>
-                                📆 2022-4-13 13:33:33
-                            </Typography>
-                        </Grid>
+                        <LifeRecordListItemTags/>
+                    </Grid>
+                    <Grid container item xs={12} justifyContent='right'>
+                        <Typography variant='caption' color={extraInfomationColor}>
+                            📌 南京工业大学
+                        </Typography>
+                    </Grid>
+                    <Grid container item xs={12} justifyContent='right'>
+                        <Typography variant='caption' color={extraInfomationColor}>
+                            🎧 借口-周杰伦
+                        </Typography>
+                    </Grid>
+                    <Grid container item xs={12} justifyContent='right'>
+                        <Typography variant='caption' color={extraInfomationColor} fontFamily={'Cascadia Code'}>
+                            📆 2022-4-13 13:33:33
+                        </Typography>
                     </Grid>
                 </Container>
-                </Grid>
-                
             </Grid>
         </Paper>
         </CardActionArea>
@@ -170,7 +158,6 @@ function LifeRecordListItemTags(props:any){
         {tagId:"1",tagName:"😆"},
         {tagId:"2",tagName:"😗🎉"},
         {tagId:"3",tagName:"😶"},
-        {tagId:"4",tagName:"😫"},
         {tagId:"1",tagName:"😆"},
         {tagId:"2",tagName:"😗"},
         {tagId:"3",tagName:"😶"},
@@ -178,15 +165,6 @@ function LifeRecordListItemTags(props:any){
         {tagId:"1",tagName:"😆"},
         {tagId:"2",tagName:"😗🎉"},
         {tagId:"3",tagName:"😶"},
-        {tagId:"4",tagName:"😫"},
-        {tagId:"1",tagName:"😆"},
-        {tagId:"2",tagName:"😗"},
-        {tagId:"3",tagName:"😶"},
-        {tagId:"4",tagName:"😫"},
-        {tagId:"1",tagName:"😆"},
-        {tagId:"2",tagName:"😗🎉"},
-        {tagId:"3",tagName:"😶"},
-        {tagId:"4",tagName:"😫"},
         {tagId:"1",tagName:"😆"},
         {tagId:"2",tagName:"😗"},
         {tagId:"3",tagName:"😶"},
