@@ -20,13 +20,13 @@ export function WelcomePage(props:any){
             <HomeAppBar/>
             <XSHomePage/>
             <Grid container sx={{
-                    backgroundImage: 'url(' + require('../images/backgrounds/HomePageBg.png') + ')',
+                    backgroundImage: 'url(' + require('../images/backgrounds/HomePageBgOnlyEmoji.png') + ')',
                     backgroundRepeat: 'no-repeat',
                     backgroundColor:
                       "#121212",
                     backgroundSize: 'cover',
                     height:'92vh',
-                    display:{xs:'none',md:'none',lg:'block',xl:'flex'}
+                    display:{xs:'none',md:'none',lg:'flex',xl:'flex'}
             }}>
                 <Grid item md justifyContent='center' >
                     <Grid container item justifyContent='center'>
@@ -96,7 +96,7 @@ export function WelcomePage(props:any){
 function XSHomePage(props:any){
     return(
         <Grid container sx={{
-            backgroundImage: 'url(' + require('../images/backgrounds/HomePageTextBackground.png') + ')',
+            //backgroundImage: 'url(' + require('../images/backgrounds/HomePageTextBackground.png') + ')',
             backgroundRepeat: 'no-repeat',
             backgroundColor:
               "#121212",

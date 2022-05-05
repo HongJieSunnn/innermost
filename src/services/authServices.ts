@@ -7,7 +7,7 @@ const config = {
     client_id: "reactapp",
     redirect_uri: "http://localhost:3000/signin-oidc",
     response_type: "id_token token",
-    scope: "openid profile loglife",
+    scope: "openid profile loglife tagserver meet userstatue userimages email",
     post_logout_redirect_uri: "http://localhost:3000/signout-oidc",
 };
 

@@ -1,13 +1,18 @@
 import { LoadingButton } from "@mui/lab";
 import { Box, Button, Checkbox, FormControlLabel, Grid, Link, Paper, TextField, Typography } from "@mui/material";
 import { createTheme } from "@mui/system";
+import { message } from "antd";
 import axios from "axios";
 import { useState } from "react";
+import { RootStateOrAny,useSelector } from "react-redux";
+import { Redirect } from "react-router";
 import { signinRedirect, signinRedirectCallback } from "../../services/authServices";
 import { getLoginReturnUrl } from "../../services/urlServices";
 import { Copyright } from "../CopyRight";
 
 export function SignIn(props:any){
+    if(!window.location.search)
+        signinRedirect();
     const [userName, setUserName] = useState("457406475@qq.com");
     const [password, setPassword] = useState("hong456..");
     const [loading, setLoading] = useState(false);
@@ -24,11 +29,17 @@ export function SignIn(props:any){
             returnUrl:getLoginReturnUrl()
         })
         .catch(err=>{
-            signinRedirect();
+            if(err.toString()==="Error: Network Error"){
+                signinRedirect();
+                return;
+            }
+            
+            message.error('登陆失败，请检查账号密码是否正确');
+            setLoading(false);
         })
     }
-
-    return(
+    
+    return (
         <Paper elevation={1} sx={{
             marginTop:16,
             display:'flex',
@@ -95,7 +106,6 @@ export function SignIn(props:any){
                     fullWidth 
                     variant="outlined" 
                     loading={loading}
-                    loadingPosition="end"
                     onClick={login}
                     sx={{
                     fontWeight:'bold'

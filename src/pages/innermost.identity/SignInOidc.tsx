@@ -4,10 +4,16 @@ import { useHistory } from 'react-router-dom'
 import { signinRedirectCallback } from '../../services/authServices'
 
 function SigninOidc() {
+  //while redict to here.The token is in the params of url.
+  //call callback method to get tokens by response and set into user.
   const history = useHistory()
   useEffect(() => {
     async function signinAsync() {      
-      await signinRedirectCallback()
+      try {
+        await signinRedirectCallback()
+      } catch (error) {
+        console.log(error);
+      }
       history.push('/')
     }
     signinAsync()
@@ -16,7 +22,7 @@ function SigninOidc() {
   return (
     <Grid container width='100%' height='100vh' justifyContent='center' alignItems='center'>
       <CircularProgress />
-      登陆成功，跳转中
+      登陆成功，即将回到主页
     </Grid>
 
   )

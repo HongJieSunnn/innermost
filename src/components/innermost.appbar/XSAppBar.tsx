@@ -1,9 +1,8 @@
-import { Box, Container, IconButton, Menu, MenuItem, Typography } from "@mui/material";
+import { Box, Container, IconButton, Menu, MenuItem, Typography,Link } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
 import React from "react";
 import { InnermostLogo } from "../InnermostLogo";
-
-const pages = ["Me",'Meet', 'Tags'];
+import { pages,pageUrls } from "./HomeAppBar";
 
 export function XSAppBar(props:any){
     const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
@@ -56,10 +55,12 @@ export function XSAppBar(props:any){
                 <MenuItem disabled onClick={handleCloseNavMenu} sx={{width:100,borderRadius:3,justifyContent:'center'}}>
                     <Typography textAlign="center">页面</Typography>
                 </MenuItem>
-                {pages.map((page) => (
-                    <MenuItem key={page} onClick={handleCloseNavMenu} sx={{borderRadius:3,justifyContent:'center'}}>
-                        <Typography textAlign="center">{page}</Typography>
-                    </MenuItem>
+                {pages.map((page,i) => (
+                    <Link key={i} href={pageUrls[i]} underline="none">
+                        <MenuItem key={page} onClick={handleCloseNavMenu} sx={{borderRadius:3,justifyContent:'center'}}>
+                            <Typography textAlign="center">{page}</Typography>
+                        </MenuItem>
+                    </Link>
                 ))}
                 </Container>
                 

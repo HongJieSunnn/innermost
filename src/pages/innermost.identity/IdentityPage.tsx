@@ -1,6 +1,8 @@
 import { createTheme,Container, CssBaseline, Grid, ThemeProvider } from "@mui/material";
 import { Route, BrowserRouter as Router, Redirect } from "react-router-dom";
 import { HomeAppBar } from "../../components/innermost.appbar/HomeAppBar";
+import ConfirmSucceed from "../../components/innermost.identity/ConfirmSucceed";
+import Register from "../../components/innermost.identity/Register";
 import { SignIn } from "../../components/innermost.identity/SignIn";
 import SigninOidc from "./SignInOidc";
 
@@ -29,7 +31,8 @@ export function IdentityPage(): JSX.Element{
                 <Container maxWidth='sm'>
                     
                     <Route path="/auth/login" component={SignIn}/>
-                    {/* <Route path="/register" component={Register} /> */}
+                    <Route path="/auth/register" component={Register} />
+                    <Route path="/auth/confirm-succeed" component={ConfirmSucceed} />
                 </Container>
             </Grid>
         </ThemeProvider>

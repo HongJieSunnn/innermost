@@ -6,6 +6,8 @@ import { RootStateOrAny, useSelector } from "react-redux";
 import { signinRedirect } from "../../services/authServices";
 import { UserMenu } from "./UserMenu";
 import {Notifications} from '@mui/icons-material';
+import { User } from "oidc-client";
+import { statueEmojiDictionary } from "../../services/statueServices";
 
 
 const lightTheme=createTheme({
@@ -19,12 +21,13 @@ const darkTheme=createTheme({
     }
 })
 
-const pages = ["Home","Record",'Meet', 'Tag'];
-const pageUrls = ["../home","../loglife",'../meet', '../tag'];
+export const pages = ["Home","Record",'Meet','Music', 'Tag'];
+export const pageUrls = [`/home`,`/loglife`,`/meet`,`/musichub`, `/tag`];
 
 export function HomeAppBar(props:any){
-  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   const user = useSelector((state:RootStateOrAny|null) => state.auth.user);
+  
+  const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorElUser(event.currentTarget);
@@ -37,7 +40,7 @@ export function HomeAppBar(props:any){
   return (
       <ThemeProvider theme={darkTheme}>
         <AppBar position='sticky' color="transparent" sx={{
-          
+          backdropFilter:'blur(3px)'
         }}>
           {/* <Container > */}
           <Toolbar disableGutters  sx={{marginLeft:3,marginRight:3}}>
@@ -90,23 +93,30 @@ export function HomeAppBar(props:any){
 }
 
 function UserAvatar(props:any){
+  const user:User = useSelector((state:RootStateOrAny|null) => state.auth.user);
+
   return(
     <IconButton onClick={props.handleOpenUserMenu}>
         <Badge
           overlap="circular"
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           badgeContent={
-            "😆"
+            statueEmojiDictionary[user.profile.user_statue]
           }>
-          <Avatar variant="rounded" alt="Remy Sharp" />
+          <Avatar variant="rounded" alt="Remy Sharp" src={user.profile.avatarimg} />
         </Badge>
     </IconButton>
   );
 }
 
 function UserButtons(){
-    function toLoginPage(){
-        signinRedirect();
+    async function toLoginPage(){
+        try {
+          await signinRedirect();
+        } catch (error) {
+          console.log("登陆超时");
+          
+        }
     }
     return(
         <Grid container spacing={2}>

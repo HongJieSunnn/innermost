@@ -9,17 +9,16 @@ import React, { useEffect, useRef } from 'react';
 import { storeUser } from '../../redux/actions/authActions';
 import { setAuthHeader } from '../axios/axiosHeaders';
 
+//To dispatch actions when userManager's user changes by invoke event.
 export default function AuthProvider({ userManager: manager, store, children }:{userManager:any,store:any,children:any}){
 
   let userManager = useRef<any>();
-
+  
   useEffect(() => {
     userManager.current = manager
 
     const onUserLoaded = (user:any) => {
-      console.log(user);
-      
-      console.log(`user loaded: ${user}`)
+      console.log(`user loaded: ${user}`)//after signincallback this delagate will be invoked.
       store.dispatch(storeUser(user))
     }
 
