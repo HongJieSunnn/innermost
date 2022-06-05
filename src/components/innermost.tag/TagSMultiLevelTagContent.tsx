@@ -1,35 +1,20 @@
 import { Breadcrumbs, Button,Card, CardActionArea, CardActions, CardContent, Container, Grid, IconButton, Link, Paper, styled, Tooltip, Typography } from "@mui/material";
 import { extraInfomationColor, randomGradient, randomTagColor, WindowsBlue } from "../../themes/InnermostColor";
 import InitialTagContentBg from '../../images/backgrounds/InitialTagContentBg.png'
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Tag } from "antd";
-import { InnermostTag, TagSPageLocationState } from "../../pages/innermost.tag/TagSPage";
+import {TagSPageLocationState } from "../../pages/innermost.tag/TagSPage";
 import { Copyright } from "../CopyRight";
 import TagSAddSynonymMenu from "./TagSAddSynonymMenu";
 import { useHistory } from "react-router-dom";
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { InnermostTag } from "./TagSTypes";
+import { formatJsonTime } from "../../services/timeServices";
+import { getNextTagsAsync } from "../../services/apiServices/tag/tag";
 
 export default function TagSMultiLevelTagContent(props:{
     locationState:TagSPageLocationState
 }){
-    let testTag:InnermostTag={
-        id:"624174934c4f03a39f79b924",
-        preferredTagName:"心情",
-        tagDetail:"心情是指无特定、普遍及能够广泛影响认知和行为的一种情感状态。一般而言，心情会受到外在环境和因素以及实物和药品的影响。",
-        previousTagId:null,
-        createTime:"2022-03-28 08:40:51",
-        updateTime:null,
-        deleteTime:null,
-        ancestors:null,
-        synonyms:[
-            "😆",
-            "😗",
-            "😶",
-            "😫",
-            "😆",
-        ],
-        relatedTagIds:new Array<string>(),
-    }
 
     return(
         <Grid>
@@ -49,7 +34,7 @@ export default function TagSMultiLevelTagContent(props:{
                     <Grid container spacing={1}>
                         <Grid container item xs={12} lg={9} borderRight={1} pr={1} mb={2} borderColor="#2B2B2B" rowSpacing={2}>
                             <TagSMultiLevelTagContentSelectedTagHeader 
-                                tag={testTag} 
+                                tag={props.locationState.tags[props.locationState.tags.length-1]}
                             />
                             <TagSMultiLevelTagContentSelectedTagNextTags 
                                 locationState={props.locationState}
@@ -67,10 +52,25 @@ export default function TagSMultiLevelTagContent(props:{
 }
 
 function TagSMultiLevelTagContentBreadcrumbBackButton(props:any){
-    const history=useHistory();
+    const history=useHistory<TagSPageLocationState>();
 
     const handleBack=()=>{
-        history.goBack();
+        //first level go back sometimes will go back to the firstLevelTag before.
+        if(history.location.state.tags.length===1){
+            history.push("/tag");
+            return;
+        }
+        let tags=history.location.state.tags;
+        tags.pop();
+        history.push({
+            pathname:history.location.pathname.substring(0,history.location.pathname.length-25),
+            state:{
+                links:history.location.state.links.slice(0,history.location.state.links.length-1),
+                tags:tags,
+                selectedIndex:history.location.state.selectedIndex,
+                scrollPosition:document.getElementById('tagslist')?.scrollTop,//get scroll Y of List instead of window
+            }
+        });
     }
 
     return(
@@ -124,7 +124,9 @@ function InitialTagSMultiLevelTagContent(props:any){
     )
 }
 
-function TagSMultiLevelTagContentSelectedTagHeader(props:any){
+function TagSMultiLevelTagContentSelectedTagHeader(props:{
+    tag:InnermostTag,
+}){
     let gradient=randomGradient();
 
     return(
@@ -134,24 +136,24 @@ function TagSMultiLevelTagContentSelectedTagHeader(props:any){
                     <Grid item xs={12}>
                         <Grid item xs={10}>
                             <Typography variant="h5" noWrap fontFamily={'YouYuan'} pt={1} pl={1}>
-                                标签名：{props.tag?.preferredTagName}
+                                标签名：{props.tag.preferredTagName}
                             </Typography>
                         </Grid>
                         <Grid item xs={12}>
                             <Typography variant="subtitle1" fontFamily={'YouYuan'} pt={0.5} pl={1}>
-                                {props.tag?.tagDetail}
+                                {props.tag.tagDetail}
                             </Typography>
                         </Grid>
                         <Grid item xs={12}>
                             <TagSMultiLevelTagContentSelectedTagHeaderSynonyms 
                                 title='同义词' 
-                                tags={props.tag?.synonyms}
+                                tags={props.tag.synonyms}
                             />
                         </Grid>
 
                         <Grid item xs={12}>
                             <Typography variant='caption' color={extraInfomationColor} fontFamily={'Cascadia Code'} pt={0.5} pl={1}>
-                                📆 {props.tag?.createTime}
+                                📆 {formatJsonTime(props.tag.createTime)}
                             </Typography>
                         </Grid>
                     </Grid>
@@ -164,78 +166,6 @@ function TagSMultiLevelTagContentSelectedTagHeader(props:any){
 function TagSMultiLevelTagContentSelectedTagNextTags(props:{
     locationState:TagSPageLocationState
 }){
-    //useEffect get next tags
-    let testNextTags=[
-        {
-            id:"624174934c4f03a39f79b930",
-            name:'心情:羞愧',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b931",
-            name:'心情:满意',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b936",
-            name:'心情:生气',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b932",
-            name:'心情:厌恶',
-            synonyms:[
-                "操操操",
-                "操操操",
-                "操操操",
-                "操操操",
-                "操操操",
-                "操操操",
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b933",
-            name:'心情:羞愧',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b934",
-            name:'心情:满意',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },{
-            id:"624174934c4f03a39f79b935",
-            name:'心情:生气',
-            synonyms:[
-
-            ],
-            ancestors:[
-                "624174934c4f03a39f79b924"
-            ]
-        },
-    ]
     const history=useHistory<TagSPageLocationState>();
 
     const [anchorElAddSynonym, setAnchorElAddSynonym] = useState<null | HTMLElement>(null);
@@ -246,22 +176,33 @@ function TagSMultiLevelTagContentSelectedTagNextTags(props:{
         setAnchorElAddSynonym(null);
     };
 
-    const handleNextTagDetailButtonClick=(tag:any/*InnermostTag*/)=>{     
+    const handleNextTagDetailButtonClick=(tag:InnermostTag/*InnermostTag*/)=>{     
         let pathname=  '/tag/'+tag.ancestors?.join('/')+"/"+tag.id;
+        let tags=history.location.state.tags;
+        tags.push(tag);
         props.locationState?.links.push({
-            name:tag.name,
+            name:tag.preferredTagName,
             url:pathname
         });
         history.push({
             pathname:pathname,
             state:{
                 links:props.locationState?.links,
-                tag:tag,
+                tags:tags,
                 selectedIndex:props.locationState?.selectedIndex,
                 scrollPosition:props.locationState.scrollPosition
             },
         });
     }
+
+    const [nextTags, setNextTags] = useState<Array<InnermostTag>>([]);
+
+    useEffect(() => {
+        getNextTagsAsync(props.locationState.tags[props.locationState.tags.length-1].id).then((tags)=>{
+            setNextTags(tags);
+        });
+    }, [props.locationState])
+    
     return(
         <Grid container item spacing={1}>
             <Grid item xs={12}>
@@ -269,42 +210,59 @@ function TagSMultiLevelTagContentSelectedTagNextTags(props:{
                     子标签：
                 </Typography>
             </Grid>
-            <Grid item container xs={12} spacing={1}>
-                {testNextTags.map((tag,i)=>(
-                    <Grid key={i} item xs={6} md={4} xl={3} >
-                        <Card sx={{border:2, borderColor:WindowsBlue, borderRadius:2}}>
-                        <CardContent>
-                            <Typography variant="h6" color="text.secondary" gutterBottom>
-                                {tag.name}
-                            </Typography>
-                            <Typography variant="subtitle1" fontWeight='bold'>
-                                同义词：
-                            </Typography>
-                            <Typography 
-                                variant='body2' 
-                                sx={{
-                                    pl:'5px',
-                                    display: '-webkit-box',
-                                    overflow: 'hidden',
-                                    WebkitBoxOrient: 'vertical',
-                                    WebkitLineClamp: 1,
-                                }} 
-                            >
-                                {(tag.synonyms===undefined||tag.synonyms.length===0)?"暂无":tag.synonyms.join('、')}
-                            </Typography>
-                        </CardContent>
-                        <CardActions>
-                            <Button fullWidth size="small" sx={{fontWeight:'bold'}} onClick={()=>{
-                                handleNextTagDetailButtonClick(testNextTags[i]);
-                            }}>详情</Button>
-                            <Button fullWidth size="small" sx={{fontWeight:'bold'}} onClick={handleOpenAddSynonymMenu}>添加同义词</Button>
-                        </CardActions>
-                        </Card>
-                        
-                    </Grid>
-                ))}
-            </Grid>
+            {nextTags.length===0?(
+                <Grid container>
+                    <Container maxWidth='xs' sx={{border:2,borderColor:WindowsBlue,borderRadius:2,mt:5}}>
+                        <Grid item container xs={12} justifyContent='center'>
+                            <Typography variant='h1'>🙂</Typography>
+                        </Grid>
+                        <Grid item container xs={12} justifyContent='center'>
+                            <Typography variant='h5' textAlign='center'>该标签还没有子标签哦</Typography>
+                        </Grid>
+                        <Grid item container xs={12} justifyContent='center'>
+                            <Typography variant='subtitle1' textAlign='center'>如果您有好的想法可以为其添加子标签哦</Typography>
+                        </Grid>
+                    </Container>
+                </Grid>
+            ):(
+                <Grid item container xs={12} spacing={1}>
+                    {nextTags.map((tag,i)=>(
+                        <Grid key={i} item xs={6} md={4} xl={3} >
+                            <Card sx={{border:2, borderColor:WindowsBlue, borderRadius:2}}>
+                            <CardContent>
+                                <Typography variant="h6" color="text.secondary" gutterBottom>
+                                    {tag.preferredTagName}
+                                </Typography>
+                                <Typography variant="subtitle1" fontWeight='bold'>
+                                    同义词：
+                                </Typography>
+                                <Typography 
+                                    variant='body2' 
+                                    sx={{
+                                        pl:'5px',
+                                        display: '-webkit-box',
+                                        overflow: 'hidden',
+                                        WebkitBoxOrient: 'vertical',
+                                        WebkitLineClamp: 1,
+                                    }} 
+                                >
+                                    {(tag.synonyms===undefined||tag.synonyms.length===0)?"暂无":tag.synonyms.join('、')}
+                                </Typography>
+                            </CardContent>
+                            <CardActions>
+                                <Button fullWidth size="small" sx={{fontWeight:'bold'}} onClick={()=>{
+                                    handleNextTagDetailButtonClick(nextTags[i]);
+                                }}>详情</Button>
+                                <Button fullWidth size="small" sx={{fontWeight:'bold'}} onClick={handleOpenAddSynonymMenu}>添加同义词</Button>
+                            </CardActions>
+                            </Card>
+                            
+                        </Grid>
+                    ))}
+                </Grid>
+            )}
             <TagSAddSynonymMenu 
+                tagId={props.locationState.tags[props.locationState.tags.length-1].id}
                 anchorEl={anchorElAddSynonym} 
                 handleCloseMenu={handleCloseAddSynonymMenu}
                 anchorOrigin={{ horizontal: 'left', vertical: 'top' }}

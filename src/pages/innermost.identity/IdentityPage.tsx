@@ -1,10 +1,10 @@
 import { createTheme,Container, CssBaseline, Grid, ThemeProvider } from "@mui/material";
 import { Route, BrowserRouter as Router, Redirect } from "react-router-dom";
 import { HomeAppBar } from "../../components/innermost.appbar/HomeAppBar";
+import ConfirmFailed from "../../components/innermost.identity/ConfirmFailed";
 import ConfirmSucceed from "../../components/innermost.identity/ConfirmSucceed";
 import Register from "../../components/innermost.identity/Register";
 import { SignIn } from "../../components/innermost.identity/SignIn";
-import SigninOidc from "./SignInOidc";
 
 const domain="http://localhost:3000";
 
@@ -33,6 +33,7 @@ export function IdentityPage(): JSX.Element{
                     <Route path="/auth/login" component={SignIn}/>
                     <Route path="/auth/register" component={Register} />
                     <Route path="/auth/confirm-succeed" component={ConfirmSucceed} />
+                    <Route path="/auth/confirm-failed" component={ConfirmFailed} />
                 </Container>
             </Grid>
         </ThemeProvider>

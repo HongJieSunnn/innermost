@@ -2,15 +2,18 @@ import { Button, Dialog,Typography, DialogTitle, IconButton, Divider, ToggleButt
 import { Checkbox, message, PageHeader, Tag } from "antd";
 import {ArrowBackIosNew,Autorenew,SaveOutlined,CreateOutlined,Title,AddLocation,MusicNote,LocalOfferOutlined,EditLocationOutlined,HeadphonesOutlined,TagOutlined} from '@mui/icons-material';
 import { createRef, useEffect, useRef, useState } from "react";
-import { SubTitleColor, WindowsBlue } from "../../themes/InnermostColor";
+import { randomInternalTagColor, SubTitleColor, WindowsBlue } from "../../themes/InnermostColor";
 import { UserMenu } from "../innermost.appbar/UserMenu";
 import LocationSearch from "../innermost.search/LocationSearch";
 import { LocationModel } from "../../services/apiServices/baiduMapService";
 import MusicSearch from "../innermost.search/MusicSearch";
 import TagSearch from "../innermost.search/TagSearch";
-import { LifeRecordCommand } from "./LifeRecordTypes";
+import { LifeRecordCommand, RecommendedMusicRecord } from "./LifeRecordTypes";
 import { CheckboxChangeEvent } from "antd/lib/checkbox";
 import { createRecord } from "../../services/apiServices/loglife/liferecord";
+import { LoadingButton } from "@mui/lab";
+import { MusicRecord } from "../innermost.musichub/MusicHubTypes";
+import { InnermostTag } from "../innermost.tag/TagSTypes";
 
 const editorBorderColor='#1F1F1F'
 const editorBorderOverColor='#42a5f5';
@@ -18,42 +21,79 @@ const editorBackgroundColor='#161616'
 
 const initialLifeRecordToCreate:LifeRecordCommand={
     text:"",
-    isShared:false,
-    tagSummaries:{
-        "6273cbcb6b2ff87e4e870b18":"心情:中性",
-    }
+    isShared:false
 }
 
 export default function LifeRecordEditor(props:{
     open:boolean;
     setOpen:React.Dispatch<React.SetStateAction<boolean>>;
+    setRecommendationDialogOpen:React.Dispatch<React.SetStateAction<boolean>>;
+    setRecommendationDialogDetail:React.Dispatch<React.SetStateAction<{
+        title: string;
+        content: string;
+        recommendedMusicRecord?: RecommendedMusicRecord | undefined;
+    }>>
 }){
     const [lifeRecordToCreate, setLifeRecordToCreate] = useState<LifeRecordCommand>(initialLifeRecordToCreate)
     const [showTitle, setShowTitle] = useState('none');
     const titleRef = useRef<HTMLInputElement>();
     const textRef = useRef<HTMLInputElement>();
 
-    const handleCreteButtonClick=()=>{
+    const handleCreteButtonClick=async()=>{
         if(lifeRecordToCreate.text===""){
             props.setOpen(false);
             message.error("必须输入记录文本");
             clearEditorInput();
             return;
         }
+        let recommendationPromise = createRecord(lifeRecordToCreate);
+        clearEditorInput();
+        clearLifeRecordToCrete();//I don't know why if close dialog and then clear,the text will not be cleared.
         props.setOpen(false);
         message.info("创建中");
-        createRecord(lifeRecordToCreate);
-        clearLifeRecordToCrete();
-        clearEditorInput();
+        let recommendation=await recommendationPromise;
+        if(recommendation.type==="Error"){
+            message.error("创建失败");
+        }else{
+            message.success("创建成功");
+        }
+        switch (recommendation.type) {
+            case "PositiveEmotionRecommendationResult":
+                console.log(recommendation.content)
+                props.setRecommendationDialogDetail({
+                    title:"🎉在想什么呢？系统推荐给您一句话，希望您会喜欢",
+                    content:recommendation.content===""?"做真正的自己":recommendation.content,
+                })
+                props.setRecommendationDialogOpen(true);
+                break;
+            case "NegativeEmotionMusicRecommendationResult":
+                props.setRecommendationDialogDetail({
+                    title:"😔此刻，有什么不开心的事吗？\n系统为您推荐了一首歌，希望您能开心如初，这是我们的宗旨。",
+                    content:"",
+                    recommendedMusicRecord:recommendation.content,
+                })
+                props.setRecommendationDialogOpen(true);
+                break;
+            case "MixedEmotionRecommendationResult":
+                props.setRecommendationDialogDetail({
+                    title:"😮Wow，这是一条情绪被系统判断为 Mixed 的记录，情绪很丰富哦",
+                    content:recommendation.content,
+                })
+                props.setRecommendationDialogOpen(true);
+                break;
+        }
     }
     
     const clearLifeRecordToCrete=()=>{
-        setLifeRecordToCreate(initialLifeRecordToCreate)
+        setLifeRecordToCreate({
+            text:"",
+            isShared:false
+        })
     }
 
     const clearEditorInput=()=>{
         if(titleRef.current!==undefined){
-            textRef.current!.value="";
+            titleRef.current!.value="";
             lifeRecordToCreate.title=undefined;
         }
         textRef.current!.value="";
@@ -61,8 +101,10 @@ export default function LifeRecordEditor(props:{
     }
 
     const handleClose=()=>{
-        props.setOpen(false);
         clearEditorInput();
+        clearLifeRecordToCrete();
+        
+        props.setOpen(false);
     }
     
 
@@ -81,11 +123,20 @@ export default function LifeRecordEditor(props:{
                     
                 ]}
                 extra={[
-                    <Button key={1} variant="outlined" startIcon={<CreateOutlined/>} sx={{textTransform:'none'}} onClick={handleCreteButtonClick}>创建</Button>, 
+                    <Button 
+                        key={1} 
+                        variant="outlined" 
+                        startIcon={<CreateOutlined/>} 
+                        sx={{textTransform:'none'}} 
+                        onClick={handleCreteButtonClick}
+                    >
+                        创建
+                    </Button>, 
                     // <Button variant="outlined" startIcon={<SaveOutlined/>} color='info' sx={{textTransform:'none'}}>保存</Button>,
                     <Button key={2} variant="outlined" startIcon={<Autorenew/>} color='error' sx={{textTransform:'none'}} onClick={()=>{
                         clearLifeRecordToCrete();
                         clearEditorInput();
+                        textRef.current?.focus()
                     }}>放弃</Button>,
                 ]}
                 footer={
@@ -167,7 +218,7 @@ export default function LifeRecordEditor(props:{
             setLifeRecordToCreate(l=>{l.title=e.target.value;return l;});
         }
         return(
-            <Container sx={{backgroundColor:editorBackgroundColor,borderRadius:2,border:2,borderColor:borderColor,display:{xs:props.show}}}> 
+            <Container sx={{backgroundColor:editorBackgroundColor,borderRadius:2,border:2,borderColor:borderColor}}> 
                 <InputBase
                     key='abc'
                     fullWidth
@@ -222,7 +273,7 @@ export default function LifeRecordEditor(props:{
                 <InputBase
                     autoFocus
                     key='LifeRecordEditorText'
-                    placeholder="写下任何你想写的"
+                    placeholder="写下任何你想写的*"
                     rows={10}
                     fullWidth
                     multiline
@@ -293,8 +344,6 @@ export default function LifeRecordEditor(props:{
             lifeRecordToCreate.longitude=location.longitude;
             lifeRecordToCreate.latitude=location.latitude;
             setLifeRecordToCreate(lifeRecordToCreate);
-            console.log(lifeRecordToCreate);
-            
         }
         
         return(
@@ -315,7 +364,7 @@ export default function LifeRecordEditor(props:{
     }
     
     function LifeRecordEditorExtraButtonsMusicButton(props:any){
-        const [musicName, setmusicName] = useState('添加音乐');
+        const [musicName, setMusicName] = useState('添加音乐');
         const [anchorElMusicButton, setAnchorElMusicButton] = useState<null | HTMLElement>(null);
         
       
@@ -326,6 +375,20 @@ export default function LifeRecordEditor(props:{
         const handleCloseMusicMenu = () => {
             setAnchorElMusicButton(null);
         };
+
+        const handleMusicRecordSelect=(musicRecord:MusicRecord)=>{
+            handleCloseMusicMenu();
+            handleSetMusicRecordToLifeRecord(musicRecord);
+        }
+
+        const handleSetMusicRecordToLifeRecord=(musicRecord:MusicRecord)=>{
+            lifeRecordToCreate.musicId=musicRecord.mid;
+            lifeRecordToCreate.musicName=musicRecord.musicName;
+            lifeRecordToCreate.singer=musicRecord.singers.map((s)=>s.singerName).join(",");
+            lifeRecordToCreate.album=musicRecord.album.albumName;
+            setMusicName(`${lifeRecordToCreate.musicName}-${lifeRecordToCreate.singer}`);
+            setLifeRecordToCreate(lifeRecordToCreate);
+        }
         return(
             <Grid item>
                 <Tooltip title="添加音乐信息可以帮助我们更好地帮您分析情绪">
@@ -334,6 +397,7 @@ export default function LifeRecordEditor(props:{
                 <MusicSearch 
                     anchorElMusicButton={anchorElMusicButton} 
                     handleCloseMusicMenu={handleCloseMusicMenu}
+                    handleMusicRecordSelect={handleMusicRecordSelect}
                 />
             </Grid>
         )
@@ -341,7 +405,8 @@ export default function LifeRecordEditor(props:{
     
     function LifeRecordEditorExtraButtonsTagButton(props:any){
         const [anchorElMusicButton, setAnchorElTagButton] = useState<null | HTMLElement>(null);
-        
+        const [tags, setTags] = useState<Array<InnermostTag>>();
+        const [tagColors, setTagColors] = useState<Array<string>>([]);
       
         const handleOpenTagMenu = (event: React.MouseEvent<HTMLElement>) => {
             setAnchorElTagButton(event.currentTarget);
@@ -350,58 +415,95 @@ export default function LifeRecordEditor(props:{
         const handleCloseTagMenu = () => {
             setAnchorElTagButton(null);
         };
+
+        const handleTagSelected=(tag:InnermostTag,color:string)=>{
+            if(tags?.includes(tag)){
+                return;
+            }
+            setTags(tags===undefined?[tag]:tags.concat(tag));
+            setTagColors(tagColors.concat(randomInternalTagColor()));
+            handleSetTagsToLifeRecord(tag);
+        }
+
+        const handleSetTagsToLifeRecord=(tag:InnermostTag)=>{
+            if(lifeRecordToCreate.tagSummaries===undefined){
+                lifeRecordToCreate.tagSummaries={};
+            }
+            lifeRecordToCreate.tagSummaries[tag.id]=tag.preferredTagName;
+            setLifeRecordToCreate(lifeRecordToCreate);
+        }
+
+        const handleTagUnSelected=(tag:InnermostTag)=>{
+            let tagId=tag.id;
+            let index=tags!.indexOf(tag);
+
+            tags!.splice(index,1);
+            tagColors.splice(index,1);
+
+            setTags(tags);
+            setTagColors(tagColors);
+            handleRemoveTagsToLifeRecord(tagId);
+        }
+
+        const handleRemoveTagsToLifeRecord=(tagId:string)=>{
+            delete lifeRecordToCreate.tagSummaries![tagId];
+            setLifeRecordToCreate(lifeRecordToCreate);
+        }
+
+        function LifeRecordEditorTags(props:any){
+            return(
+                <Paper
+                    sx={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        listStyle: 'none',
+                        p: 0.5,
+                        m: 0,
+                    }}
+                    elevation={0}
+                    component="ul"
+                >
+                    <Typography variant='overline' color='#666666'>
+                        🏷️标签：
+                        {tags?.map((tag,i)=>(
+                            <Tag 
+                                key={i} 
+                                closable 
+                                color={tagColors[i]}
+                                onClose={()=>handleTagUnSelected(tag)}
+                            >
+                                {tag.preferredTagName}
+                            </Tag>
+                        ))}
+                    </Typography>
+                    
+                </Paper>
+            )
+        }
+
         return(
             <Grid item>
                 <Tooltip title="添加标签信息可以帮助我们更好地帮您整理情绪">
-                    <Button variant="outlined" size='small' color='info' onClick={handleOpenTagMenu} startIcon={<TagOutlined/>}>添加标签</Button>
+                    <Button 
+                        variant="outlined" 
+                        size='small' 
+                        color='info' 
+                        onClick={handleOpenTagMenu} 
+                        startIcon={<TagOutlined/>}
+                        fullWidth
+                    >
+                        {tags===undefined?"添加标签":(<LifeRecordEditorTags/>)}
+                    </Button>
                 </Tooltip>
                 <TagSearch 
                     anchorElTagButton={anchorElMusicButton} 
                     handleCloseTagMenu={handleCloseTagMenu}
+                    handleTagSelected={handleTagSelected}
                 />
             </Grid>
         )
     }
     
-    function LifeRecordEditorTags(props:any){
-        const ListItem = styled('li')(({ theme }) => ({
-            margin: theme.spacing(0.5),
-        }));
-        const [tags, setTags] = useState([
-            {tagId:"1",tagName:"😆"},
-            {tagId:"2",tagName:"😗"},
-            {tagId:"3",tagName:"😶"},
-            {tagId:"4",tagName:"😫"},
-            {tagId:"5",tagName:"😆"},
-            {tagId:"6",tagName:"😗"},
-            {tagId:"7",tagName:"😶"},
-            {tagId:"8",tagName:"😫"},
-            {tagId:"9",tagName:"😆"},
-            {tagId:"10",tagName:"😗🎉"},
-            {tagId:"11",tagName:"😶"},
-        ]);
-        return(
-            <Paper
-                sx={{
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    listStyle: 'none',
-                    p: 0.5,
-                    m: 0,
-                }}
-                elevation={0}
-                component="ul"
-            >
-                {tags.map((tag)=>(
-                    <ListItem key={tag.tagId}>
-                        <Tag closable>{tag.tagName}</Tag>
-                    </ListItem>
-                    
-                ))}
-                
-            </Paper>
-        )
-    }
 
     return(
         <Dialog 
@@ -424,39 +526,12 @@ export default function LifeRecordEditor(props:{
             <Divider variant="middle" sx={{marginTop:2,marginBottom:1}}/>
             <DialogContent>
                 <Grid container rowGap={2}>
-                    <Grid item container xs={12} justifyContent='right'>
-                        <LifeRecordEditorToggleButtonGroup/>
-                    </Grid>
-                    <LifeRecordEditorTitleEditor show={showTitle}/>
+                    <LifeRecordEditorTitleEditor/>
                     <LifeRecordEditorTextEditor/>
-                    <LifeRecordEditorTags/>
                     <LifeRecordEditorExtraButtons/>
                 </Grid>
                 
             </DialogContent>
         </Dialog>
-    )
-}
-
-function LifeRecordEditorCard(props:any){
-    return(
-        <Card sx={{ display: 'flex',borderRadius:3 ,backgroundColor:props.bgColor,height:'100%'}}>
-            <CardMedia>
-                <Typography variant="h3" pt={2} pb={2} pl={1}>
-                   {props.cardEmoji}
-                </Typography>
-            </CardMedia>
-            <CardContent sx={{p:0}}>
-                <Typography sx={{fontSize:5}}>
-                   福建省 福州市 连江县
-                </Typography>
-                <Typography sx={{fontSize:4}}>
-                    平流尾地质公园
-                </Typography>
-                <Typography sx={{fontSize:3}}>
-                    福州市-连江县-茭南村X135
-                </Typography>
-            </CardContent>
-        </Card>
     )
 }

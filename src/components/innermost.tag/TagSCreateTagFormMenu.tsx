@@ -1,6 +1,8 @@
 import { Button, Container, Grid, Menu, PopoverOrigin, TextField,Typography } from "@mui/material";
-import { Drawer } from "antd";
+import { Drawer, message } from "antd";
 import { useRef, useState } from "react";
+import { createReviewedTag } from "../../services/apiServices/tag/reviewedtag";
+import { CreateReviewedTagCommand } from "./TagSTypes";
 
 interface TagSCreateTagFormMenuProps{
     title?:string,
@@ -8,25 +10,21 @@ interface TagSCreateTagFormMenuProps{
     handleCloseMenu:()=>void,
     transformOrigin?:PopoverOrigin,
     anchorOrigin?:PopoverOrigin,
-    previousTagId?:string,
-    ancestors?:string[],
-}
-
-interface ReviewedTagModel{
-    preferredTagName:string,
-    tagDetail:string,
-    previousTagId:string|null|undefined,
-    ancestors:string[]|null|undefined,
-    synonyms?:string[],
+    preTagName:string|null,
+    previousTagId:string|null,
+    ancestors:string[]|null,
 }
 
 export default function TagSCreateTagFormMenu(props:TagSCreateTagFormMenuProps){
-    const [reviewedTag, setReviewedTag] = useState<ReviewedTagModel>({
+    const initialReviewedTagModel:CreateReviewedTagCommand={
         preferredTagName:'',
         tagDetail:'',
         previousTagId:props.previousTagId,
-        ancestors:props.ancestors
-    });
+        ancestors:props.ancestors,
+        synonyms:null,
+    }
+
+    const [reviewedTag, setReviewedTag] = useState<CreateReviewedTagCommand>(initialReviewedTagModel);
 
     const preferredNameRef = useRef<HTMLInputElement>();
     const tagDetailRef = useRef<HTMLInputElement>();
@@ -36,12 +34,12 @@ export default function TagSCreateTagFormMenu(props:TagSCreateTagFormMenuProps){
         preferredNameRef.current!.value="";
         tagDetailRef.current!.value="";
         synonymsRef.current!.value="";
-        setReviewedTag({
-            preferredTagName:'',
-            tagDetail:'',
-            previousTagId:props.previousTagId,
-            ancestors:props.ancestors
-        })
+        setReviewedTag(initialReviewedTagModel);
+    }
+
+    function handleClose(){
+        props.handleCloseMenu();
+        clearTextFields();
     }
 
     function handlePreferredTagNameChange(e:React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>){
@@ -59,6 +57,18 @@ export default function TagSCreateTagFormMenu(props:TagSCreateTagFormMenuProps){
         setReviewedTag(reviewedTag);
     }
 
+    function handleCreateReviewedTagButtonClick(){
+        if(reviewedTag.preferredTagName===''){
+            message.warning("您还未输入想要创建的标签名");
+            return;
+        }else if(reviewedTag.tagDetail===''){
+            message.warning("我们希望您能提供标签相关详情");
+            return;
+        }
+        reviewedTag.preferredTagName=props.preTagName===null?reviewedTag.preferredTagName:props.preTagName!.concat(`:${reviewedTag.preferredTagName}`);
+        createReviewedTag(reviewedTag);
+        handleClose();
+    }
     //We can't set text field value by states in menu or drawer which will avoid states change.
     //Menu and drawer will change the state while close or open.I guess if not so the re-rendering action will chagne the open state of them.
     //But text field will not clear the text after close.So we should not clear data.
@@ -68,7 +78,7 @@ export default function TagSCreateTagFormMenu(props:TagSCreateTagFormMenuProps){
             id="menu-createtag"
             anchorEl={props.anchorEl}
             open={Boolean(props.anchorEl)}
-            onClose={props.handleCloseMenu}
+            onClose={handleClose}
             PaperProps={{
                 elevation: 0,
                 sx: {
@@ -144,7 +154,7 @@ export default function TagSCreateTagFormMenu(props:TagSCreateTagFormMenuProps){
                 </Grid>
 
                 <Grid item m={1}>
-                    <Button fullWidth variant="contained" sx={{fontWeight:'bold'}} onClick={clearTextFields}>创建标签</Button>
+                    <Button fullWidth variant="contained" sx={{fontWeight:'bold'}} onClick={handleCreateReviewedTagButtonClick}>创建标签</Button>
                 </Grid>
             </Grid>
         </Menu>

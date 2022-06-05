@@ -5,9 +5,17 @@ import { useState } from "react";
 import LifeRecordEditor from "./LifeRecordEditor";
 import { IconColor, SubTitleColor } from "../../themes/InnermostColor";
 import LocationSearch from "../innermost.search/LocationSearch";
+import LifeRecordRecommendation from "./LifeRecordRecommendation";
+import { RecommendedMusicRecord } from "./LifeRecordTypes";
 
 export default function LogLifeHeader(props:any){
     const [editorOpen, setEditorOpen] = useState(false);
+
+    const [recommendationDialogOpen, setRecommendationDialogOpen] = useState(false);
+    const [recommendationDialogDetail, setRecommendationDialogDetail] = useState<{title:string,content:string,recommendedMusicRecord?:RecommendedMusicRecord}>({
+        title:"",
+        content:"",
+    });
 
     const handleOpenEditor=()=>{
         setEditorOpen(true);
@@ -46,8 +54,20 @@ export default function LogLifeHeader(props:any){
         <Grid container>
             <Grid item xs={12}>
                 <LogLifePageHeader handleOpenEditor={handleOpenEditor}/>
-                <LifeRecordEditor open={editorOpen} setOpen={setEditorOpen} />
+                <LifeRecordEditor 
+                    open={editorOpen} 
+                    setOpen={setEditorOpen} 
+                    setRecommendationDialogOpen={setRecommendationDialogOpen}
+                    setRecommendationDialogDetail={setRecommendationDialogDetail}
+                />
                 <LocationSearch/>
+                <LifeRecordRecommendation 
+                    open={recommendationDialogOpen} 
+                    setOpen={setRecommendationDialogOpen} 
+                    title={recommendationDialogDetail.title}
+                    content={recommendationDialogDetail.content}
+                    recommendedMusicRecord={recommendationDialogDetail.recommendedMusicRecord}
+                />
             </Grid>
         </Grid>
     )

@@ -5,12 +5,14 @@
 
 //Modify by HongJieSun 2022
 
+import { message } from 'antd';
+import { UserManager } from 'oidc-client';
 import React, { useEffect, useRef } from 'react';
-import { storeUser } from '../../redux/actions/authActions';
+import { storeUser, userExpired, userSignedOut } from '../../redux/actions/authActions';
 import { setAuthHeader } from '../axios/axiosHeaders';
 
 //To dispatch actions when userManager's user changes by invoke event.
-export default function AuthProvider({ userManager: manager, store, children }:{userManager:any,store:any,children:any}){
+export default function AuthProvider({ userManager: manager, store, children }:{userManager:UserManager,store:any,children:any}){
 
   let userManager = useRef<any>();
   
@@ -33,10 +35,15 @@ export default function AuthProvider({ userManager: manager, store, children }:{
 
     const onAccessTokenExpired = () => {
       console.log(`user token expired`)
+      message.info("登陆状态已过期")
+      store.dispatch(userExpired())
     }
 
     const onUserSignedOut = () => {
       console.log(`user signed out`)
+      store.dispatch(userSignedOut())
+      manager.removeUser();
+      message.info("您已退出登录");
     }
 
     // events for user

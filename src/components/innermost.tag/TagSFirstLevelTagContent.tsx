@@ -1,37 +1,22 @@
 import { Add, ExpandMore, Search } from "@mui/icons-material";
 import { Accordion, AccordionDetails, AccordionSummary, Button, Divider, Drawer, Grid, IconButton, InputBase, List, ListItemButton, Paper, SxProps, Theme, Toolbar, Tooltip, Typography } from "@mui/material";
+import { User } from "oidc-client";
 import { useEffect, useState } from "react";
+import { RootStateOrAny, useSelector } from "react-redux";
 import { useHistory } from "react-router-dom";
 import { TagSPageLocationState } from "../../pages/innermost.tag/TagSPage";
+import { getFirstLevelTagsAsync } from "../../services/apiServices/tag/tag";
 import { WindowsBlue } from "../../themes/InnermostColor";
 import TagSCreateTagFormDrawer from "./TagSCreateTagFormMenu";
-
-const testFirstLevelTags:{[index:string]:string}={
-    "心情":"624174934c4f03a39f79b924",
-    "音乐":"624174934c4f03a39f79b925",
-    "生活":"624174934c4f03a39f79b926",
-    "娱乐":"624174934c4f03a39f79b927",
-    "自然":"624174934c4f03a39f79b928",
-    "心情1":"624174934c4f03a39f79b924",
-    "音乐2":"624174934c4f03a39f79b925",
-    "生活3":"624174934c4f03a39f79b926",
-    "娱乐4":"624174934c4f03a39f79b927",
-    "自然5":"624174934c4f03a39f79b928",
-    "心情5":"624174934c4f03a39f79b924",
-    "音乐6":"624174934c4f03a39f79b925",
-    "生活1":"624174934c4f03a39f79b926",
-    "娱乐2":"624174934c4f03a39f79b927",
-    "自然3":"624174934c4f03a39f79b928",
-}//TODO should get by back-end.
+import { InnermostTag} from "./TagSTypes";
 
 interface TagSFirstLevelTagListProps{
+    tags:InnermostTag[],
     selectedIndex:number,
     scrollPosition:number,
 }
 
-interface TagSFirstLevelTagAccordionListProps{
-    selectedIndex:number,
-    scrollPosition:number,
+interface TagSFirstLevelTagAccordionListProps extends TagSFirstLevelTagListProps{
     handleAccordionUnExpanded:() => void,
 }
 
@@ -60,24 +45,29 @@ export function TagSFirstLevelTagListAccordion(props:{
     locationState:TagSPageLocationState
 }){
     const [expanded, setExpanded] = useState(false);
-
     const handleAccordionExpanded=()=>{
         setExpanded(true);
     }
-
     const handleAccordionUnExpanded=()=>{
         setExpanded(false);
     }
 
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
-
     const handleCloseMenu = () => {
         setAnchorEl(null);
     };
+
+    const [firstLevelTags, setFirstLevelTags] = useState<Array<InnermostTag>>([]);
+
+    useEffect(() => {
+        getFirstLevelTagsAsync().then((tags)=>{
+            setFirstLevelTags(tags);
+        });
+
+    }, [])
 
     return(
         <Accordion 
@@ -110,9 +100,13 @@ export function TagSFirstLevelTagListAccordion(props:{
                     handleCloseMenu={handleCloseMenu}
                     anchorOrigin={{horizontal: 'right', vertical: 'top'}}
                     transformOrigin={{horizontal: 'center', vertical: 'top'}}
+                    previousTagId={null}
+                    ancestors={null}
+                    preTagName={null}
                 />
                 <Divider sx={{ mt:2,mb:2}}/>
                 <TagSFirstLevelTagAccordionList 
+                    tags={firstLevelTags}
                     selectedIndex={props.locationState?.selectedIndex??-1} 
                     scrollPosition={props.locationState?.scrollPosition??0} 
                     handleAccordionUnExpanded={handleAccordionUnExpanded}
@@ -125,15 +119,24 @@ export function TagSFirstLevelTagListAccordion(props:{
 export function TagSFirstLevelTagContent(props:{
     locationState:TagSPageLocationState
 }){
+
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
     };
-
     const handleCloseMenu = () => {
         setAnchorEl(null);
     };
+
+    const [firstLevelTags, setFirstLevelTags] = useState<Array<InnermostTag>>([]);
+
+    useEffect(() => {
+        getFirstLevelTagsAsync().then((tags)=>{
+            setFirstLevelTags(tags);
+        });
+
+    }, [])
+
     return(
         <Grid mr={1} display={{xs:'none',sm:'block'}}>
             <TagSFirstLevelTagListSearchBar/>
@@ -144,9 +147,12 @@ export function TagSFirstLevelTagContent(props:{
                 handleCloseMenu={handleCloseMenu}
                 anchorOrigin={{horizontal: 'right', vertical: 'bottom'}}
                 transformOrigin={{horizontal: 'center', vertical: 'top'}}
+                previousTagId={null}
+                ancestors={null}
+                preTagName={null}
             />
             <Divider sx={{ marginTop:2}}/>
-            <TagSFirstLevelTagList selectedIndex={props.locationState?.selectedIndex??-1} scrollPosition={props.locationState?.scrollPosition??0} />
+            <TagSFirstLevelTagList tags={firstLevelTags} selectedIndex={props.locationState?.selectedIndex??-1} scrollPosition={props.locationState?.scrollPosition??0} />
         </Grid>
     )
 }
@@ -185,9 +191,9 @@ function TagSFirstLevelTagList(props:TagSFirstLevelTagListProps){
     
     const [selectedFirstLevelButtonIndex, setSelectedFirstLevelButtonIndex] = useState(props.selectedIndex);
 
-    const handleFirstLevelTagButtonClick=(tag:any,index:number)=>{
+    const handleFirstLevelTagButtonClick=(tag:InnermostTag,index:number)=>{
         history.push({
-            pathname:'/tag/'+testFirstLevelTags[tag],//ObjectId of tag
+            pathname:'/tag/'+tag.id,
             state:{
                 links:[
                     {
@@ -195,11 +201,11 @@ function TagSFirstLevelTagList(props:TagSFirstLevelTagListProps){
                         url:'/tag'
                     },
                     {
-                        name:tag,
-                        url:'/tag/'+testFirstLevelTags[tag]
+                        name:tag.preferredTagName,
+                        url:'/tag/'+tag.id
                     },
                 ],
-                tag:tag,
+                tags:[tag],
                 selectedIndex:index,
                 scrollPosition:document.getElementById('tagslist')?.scrollTop,//get scroll Y of List instead of window
             }
@@ -210,7 +216,7 @@ function TagSFirstLevelTagList(props:TagSFirstLevelTagListProps){
 
     return(
         <List id={'tagslist'} dense component="div" role="list" sx={{height: '60vh',overflow: 'auto'}}>
-            {Object.keys(testFirstLevelTags).map((t,i)=>(
+            {props.tags.map((t,i)=>(
                 <ListItemButton
                     key={i}
                     role="listitem"
@@ -220,7 +226,7 @@ function TagSFirstLevelTagList(props:TagSFirstLevelTagListProps){
                         handleFirstLevelTagButtonClick(t,i);
                     }}
                 >
-                    {t}
+                    {t.preferredTagName}
                 </ListItemButton>
             ))}
         </List>
@@ -236,9 +242,9 @@ function TagSFirstLevelTagAccordionList(props:TagSFirstLevelTagAccordionListProp
     
     const [selectedFirstLevelButtonIndex, setSelectedFirstLevelButtonIndex] = useState(props.selectedIndex);
 
-    const handleFirstLevelTagButtonClick=(e:React.MouseEvent<HTMLDivElement, MouseEvent>,tagName:string,index:number)=>{       
+    const handleFirstLevelTagButtonClick=(e:React.MouseEvent<HTMLDivElement, MouseEvent>,tag:InnermostTag,index:number)=>{       
         history.push({
-            pathname:'/tag/'+testFirstLevelTags[tagName],//ObjectId of tag
+            pathname:'/tag/'+tag.id,//ObjectId of tag
             state:{
                 links:[
                     {
@@ -246,10 +252,11 @@ function TagSFirstLevelTagAccordionList(props:TagSFirstLevelTagAccordionListProp
                         url:'/tag'
                     },
                     {
-                        name:tagName,
-                        url:'/tag/'+testFirstLevelTags[tagName]
+                        name:tag.preferredTagName,
+                        url:'/tag/'+tag.id
                     },
                 ],
+                tags:[tag],
                 selectedIndex:index,
                 scrollPosition:document.getElementById('tagsaccordionlist')?.scrollTop,//get scroll Y of List instead of window
             }
@@ -260,7 +267,7 @@ function TagSFirstLevelTagAccordionList(props:TagSFirstLevelTagAccordionListProp
 
     return(
         <Grid id='tagsaccordionlist' container role="list" sx={{height:'22vh',overflow: 'auto'}}>
-            {Object.keys(testFirstLevelTags).map((t,i)=>(
+            {props.tags.map((t,i)=>(
                 <Grid key={i} item xs={3}>
                     <ListItemButton
                         key={i}
@@ -272,7 +279,7 @@ function TagSFirstLevelTagAccordionList(props:TagSFirstLevelTagAccordionListProp
                             props.handleAccordionUnExpanded();
                         }}
                     >
-                        {t}
+                        {t.preferredTagName}
                     </ListItemButton>
                 </Grid>
             ))}

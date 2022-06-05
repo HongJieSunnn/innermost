@@ -8,5 +8,5 @@ export function getFormatedLocationTime(json=false):string{
 }
 
 export function formatJsonTime(jsonTime:string):string{
-    return jsonTime.replace("T"," ");
+    return jsonTime.replace("T"," ").slice(0,19);
 }

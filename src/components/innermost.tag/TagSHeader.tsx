@@ -5,11 +5,15 @@ import { useState } from "react";
 import { IconColor, SubTitleColor } from "../../themes/InnermostColor";
 import TagSAddSynonymMenu from "./TagSAddSynonymMenu";
 import TagSCreateTagFormDrawer from "./TagSCreateTagFormMenu";
+import { InnermostTag } from "./TagSTypes";
 
 
 
 
-export default function TagSHeader(props:any){
+export default function TagSHeader(props:{
+    tag:InnermostTag,
+    createButtonDisabled:boolean,
+}){
     const [anchorElCreateTag, setAnchorElCreateTag] = useState<null | HTMLElement>(null);
     const [anchorElAddSynonym, setAnchorElAddSynonym] = useState<null | HTMLElement>(null);
 
@@ -35,10 +39,10 @@ export default function TagSHeader(props:any){
                 
             ]}
             extra={[
-                <Button disabled={props.createButtonDisabled} variant="outlined" startIcon={<Create/>} sx={{textTransform:'none'}} onClick={handleOpenCreateTagMenu}>
+                <Button key={1} disabled={props.createButtonDisabled} variant="outlined" startIcon={<Create/>} sx={{textTransform:'none'}} onClick={handleOpenCreateTagMenu}>
                     创建子标签
                 </Button>,
-                <Button disabled={props.createButtonDisabled} variant="outlined" color='info' startIcon={<Add/>} sx={{textTransform:'none'}} onClick={handleOpenAddSynonymMenu}>
+                <Button key={2} disabled={props.createButtonDisabled} variant="outlined" color='info' startIcon={<Add/>} sx={{textTransform:'none'}} onClick={handleOpenAddSynonymMenu}>
                     添加同义词
                 </Button>,
             ]}
@@ -49,14 +53,20 @@ export default function TagSHeader(props:any){
                             多样的思绪，多样的标签
                         </Typography>
                     </Grid>
-                    <Grid item container justifyContent='right' xs>
+                    {/* <Grid item container justifyContent='right' xs>
                         <TagSHeaderTagSearchBar/>
-                    </Grid>
+                    </Grid> */}
                 </Grid>
             }
         >
-            <TagSCreateTagFormDrawer anchorEl={anchorElCreateTag} handleCloseMenu={handleCloseCreateTagMenu} />
-            <TagSAddSynonymMenu anchorEl={anchorElAddSynonym} handleCloseMenu={handleCloseAddSynonymMenu}/>
+            <TagSCreateTagFormDrawer 
+                anchorEl={anchorElCreateTag} 
+                handleCloseMenu={handleCloseCreateTagMenu} 
+                previousTagId={props.tag?.id}
+                ancestors={props.createButtonDisabled?null:(props.tag!.ancestors===null?[props.tag.id]:props.tag.ancestors!.concat(props.tag.id))}
+                preTagName={props.tag?.preferredTagName}
+            />
+            <TagSAddSynonymMenu tagId={props.tag?.id} anchorEl={anchorElAddSynonym} handleCloseMenu={handleCloseAddSynonymMenu}/>
         </PageHeader>
     )
 }

@@ -1,5 +1,7 @@
 import { Button, Grid, Menu, PopoverOrigin, TextField, Typography } from "@mui/material";
+import { message } from "antd";
 import { useRef, useState } from "react";
+import { addSynonymsToTag } from "../../services/apiServices/tag/reviewedtag";
 
 
 interface TagSAddSynonymMenuProps{
@@ -7,7 +9,7 @@ interface TagSAddSynonymMenuProps{
     handleCloseMenu:()=>void,
     transformOrigin?:PopoverOrigin,
     anchorOrigin?:PopoverOrigin,
-    //tagId:string,
+    tagId:string,
 }
 
 export default function TagSAddSynonymMenu(props:TagSAddSynonymMenuProps){
@@ -16,8 +18,31 @@ export default function TagSAddSynonymMenu(props:TagSAddSynonymMenuProps){
     const synonymsRef = useRef<HTMLInputElement>();
 
     const handleSynonymsChange=(e:React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>)=>{
-        
         setSynonyms(e.currentTarget.value.split("&"));
+    }
+
+    const handleClose=()=>{
+        props.handleCloseMenu();
+        clearTextFields();
+    }
+
+    const clearTextFields=()=>{
+        synonymsRef.current!.value="";
+        setSynonyms([]);
+    }
+
+    const handleAddSynonymsButtonClick=()=>{
+        if(synonyms.length===0){
+            message.warning("您还未指定想添加的同义词");
+            clearTextFields();
+            return;
+        }
+        addSynonymsToTag({
+            tagId:props.tagId,
+            synonyms:synonyms
+        })
+        clearTextFields();
+        handleClose();
     }
 
     return(
@@ -25,7 +50,7 @@ export default function TagSAddSynonymMenu(props:TagSAddSynonymMenuProps){
             id="menu-appbar"
             anchorEl={props.anchorEl}
             open={Boolean(props.anchorEl)}
-            onClose={props.handleCloseMenu}
+            onClose={handleClose}
             PaperProps={{
                 elevation: 0,
                 sx: {
@@ -74,7 +99,7 @@ export default function TagSAddSynonymMenu(props:TagSAddSynonymMenuProps){
                 </Grid>
 
                 <Grid item m={1}>
-                    <Button fullWidth color='info' variant="contained" sx={{fontWeight:'bold'}}>添加同义词</Button>
+                    <Button fullWidth color='info' variant="contained" sx={{fontWeight:'bold'}} onClick={handleAddSynonymsButtonClick}>添加同义词</Button>
                 </Grid>
             </Grid>
         </Menu>

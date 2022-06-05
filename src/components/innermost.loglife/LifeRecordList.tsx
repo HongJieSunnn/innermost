@@ -5,11 +5,19 @@ import { useEffect, useState } from "react";
 import zhCN from 'antd/lib/date-picker/locale/zh_CN';
 import LifeRecordDetail from "./LifeRecordDetail";
 import { LifeRecord, TagSummary } from "./LifeRecordTypes";
-import { getAllRecords } from "../../services/apiServices/loglife/liferecord";
+import { getAllRecords, getRecordsByDateTime } from "../../services/apiServices/loglife/liferecord";
 import { RootStateOrAny, useSelector } from "react-redux";
 import { User } from "oidc-client";
 import { formatJsonTime } from "../../services/timeServices";
 import { Autorenew } from "@mui/icons-material";
+import NotSignIn from "../NotSignIn";
+import moment from "moment";
+
+const dateTimePickerTypeFindTypeMap:{[index:string]:string}={
+    "date":"FindByDay",
+    "year":"FindByYear",
+    "month":"FindByMonth"
+}
 
 export default function LifeRecordList(props:any){
     const user:User = useSelector((state:RootStateOrAny|null) => state.auth.user);
@@ -23,11 +31,12 @@ export default function LifeRecordList(props:any){
         createTime:"2202-13-32 25:61:61",
         tagSummaries:[{tagId:"err",tagName:"错误:加载了错误的 LifeRecord "}],
     })
+    
 
     //所有记录
     const [lifeRecords, setLifeRecords] = useState<{lifeRecords:LifeRecord[],bgColors:string[]}>({
         lifeRecords:[{
-            recordId:-1,
+            recordId:-2,
             text:"当你看到这句话，那么肯定是程序出现了一些问题了，请联系管理员",
             isShared:false,
             createTime:"2202-13-32 25:61:61",
@@ -81,9 +90,9 @@ export default function LifeRecordList(props:any){
             let set2 = new Set(lifeRecords.lifeRecords.map((d)=>d.recordId));
             let newCreatedRecordIds= Array.from(new Set([...set1].filter(x => !set2.has(x))));
             if(newCreatedRecordIds.length>0){
-                message.info(`有${newCreatedRecordIds.length}条新建记录`)
+                message.info(`有${newCreatedRecordIds.length}条新记录`);
             }else{
-                message.info(`没有新建记录，但祝您好心情哦😀`)
+                message.info(`没有新记录，但祝您好心情哦😀`);
             }
             let bgColors:string[]=[];
             data.map((d,i)=>{bgColors.push(randomGradient())});
@@ -98,6 +107,9 @@ export default function LifeRecordList(props:any){
     }
 
     useEffect(() => {
+        if(user===null){
+            return;
+        }
         getAllRecords().then((data)=>{
             let bgColors:string[]=[];
             data.map((d,i)=>{bgColors.push(randomGradient())});
@@ -131,9 +143,14 @@ export default function LifeRecordList(props:any){
         const { Option } = Select;
         const { RangePicker } = DatePicker;
         const [type, setType] = useState('date');
+
     
         function PickerWithType({ type, onChange }:{type:any,onChange:any}) {
-            if (type === 'date') return <DatePicker locale={zhCN} onChange={onChange} />;
+            function disabledDate(current:any) {
+                // Can not select days before today and today
+                return current && current > moment().endOf('day');
+            }
+            if (type === 'date') return <DatePicker disabledDate={disabledDate} locale={zhCN} onChange={onChange} />;
             if (type === 'range') return <RangePicker locale={zhCN} onChange={onChange} />;
             return <DatePicker locale={zhCN} picker={type} onChange={onChange} />;
         }
@@ -144,9 +161,42 @@ export default function LifeRecordList(props:any){
                     <Option value="date">Date</Option>
                     <Option value="month">Month</Option>
                     <Option value="year">Year</Option>
-                    <Option value="range">Range</Option>
                 </Select>
-                <PickerWithType type={type} onChange={(v:any)=>console.log(v)} />
+                <PickerWithType type={type} onChange={async(value: any, dateString: string)=>{
+                    let date=dateString.split("-");
+                    let records:LifeRecord[]=[];
+                    switch (date.length) {
+                        case 1:
+                            records= await getRecordsByDateTime(date[0],dateTimePickerTypeFindTypeMap[type]);
+                            break;
+                        case 2:
+                            records= await getRecordsByDateTime(date[0],dateTimePickerTypeFindTypeMap[type],date[1]);
+                            break;
+                        case 3:
+                            records= await getRecordsByDateTime(date[0],dateTimePickerTypeFindTypeMap[type],date[1],date[2]);
+                            break;
+                    }
+                    if(records.length===0){
+                        records=[{
+                            recordId:-3,
+                            title:"你好,",
+                            text:`在 ${dateString} 你并没有留下任何记录`,
+                            isShared:false,
+                            createTime:"2202-13-32 25:61:61",
+                            tagSummaries:[{tagId:"empty",tagName:`empty`}],
+                        }]
+                    }
+                    let bgColors:string[]=[];
+                    records.map((d,i)=>{bgColors.push(randomGradient())});
+                    records.forEach((d)=>d.tagSummaries.forEach((t)=>t.tagColor=randomInternalTagColor()))
+                    let lifeRecords:{lifeRecords:LifeRecord[],bgColors:string[]}={
+                        lifeRecords:records,
+                        bgColors:bgColors,
+                    };
+                    setLifeRecords(lifeRecords);
+                    handleCurrentLifeRecordChange(lifeRecords,1,currentPageSize);
+                    message.success(`获取 ${dateString} 的记录成功`)
+                }} />
                 <Tooltip title="刷新，不仅能获得最新的记录，还能换种心情哦" placement="top" onClick={handleRefreshButtonClick}>
                     <IconButton color="primary" >
                         <Autorenew/>
@@ -157,7 +207,13 @@ export default function LifeRecordList(props:any){
     }
 
     function LifeRecordListContent(props:any){
-        if(lifeRecords.lifeRecords[0].recordId===-1){
+        if(user===null){
+            return(
+                <NotSignIn/>
+            )
+        }
+
+        if(lifeRecords.lifeRecords[0]?.recordId===-2){
             let arrLengthNight:number[]=[1,2,3,4,5,6,7,8,9];
             
             return (
@@ -208,7 +264,11 @@ export default function LifeRecordList(props:any){
         }
         
         return(
-            <CardActionArea sx={{borderRadius:2,height:'100%'}} onClick={handleDetailOpen}>{/*to fit max height of grids same line*/}
+            <CardActionArea 
+                sx={{borderRadius:2,height:'100%'}} 
+                onClick={handleDetailOpen} 
+                disabled={props.lifeRecord.recordId===-1||props.lifeRecord.recordId===-3}
+            >{/*to fit max height of grids same line*/}
             <Paper sx={{ display: 'flex',borderRadius:2 ,background:props.bgColor,height:'100%'}}>{/*to fit height of CardActionArea */}
                 <Grid container pb={1} spacing={1}>{/*flex-end makes create time in same position of one line items */}
                     <Grid item xs={12}>

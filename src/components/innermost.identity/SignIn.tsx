@@ -3,29 +3,39 @@ import { Box, Button, Checkbox, FormControlLabel, Grid, Link, Paper, TextField, 
 import { createTheme } from "@mui/system";
 import { message } from "antd";
 import axios from "axios";
-import { useState } from "react";
+import React from "react";
+import { createRef, useState } from "react";
 import { RootStateOrAny,useSelector } from "react-redux";
 import { Redirect } from "react-router";
 import { signinRedirect, signinRedirectCallback } from "../../services/authServices";
 import { getLoginReturnUrl } from "../../services/urlServices";
 import { Copyright } from "../CopyRight";
 
+const regEmail = /^([a-zA-Z0-9_-])+@([a-zA-Z0-9_-])+(\.[a-zA-Z0-9_-])+/
+
 export function SignIn(props:any){
     if(!window.location.search)
         signinRedirect();
-    const [userName, setUserName] = useState("457406475@qq.com");
-    const [password, setPassword] = useState("hong456..");
+    const [userName, setUserName] = useState("");
+    const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
+
+    const loginButtonRef = createRef<HTMLButtonElement>();
 
     function login(){
+        if(userName===""||password===""){
+            message.error('账号和密码都不允许为空');
+            return;
+        }
         setLoading(true);
         axios.defaults.withCredentials=true;
         axios.defaults.headers.common['Access-Control-Allow-Origin']='http://localhost:5106'
         axios.post("https://localhost:5106/Account/Login",{
             account:userName,
             password:password,
-            accountType:'Email',
-            rememberMe:true,
+            accountType:regEmail.test(userName)?"Email":"UserName",
+            rememberMe:rememberMe,
             returnUrl:getLoginReturnUrl()
         })
         .catch(err=>{
@@ -67,9 +77,10 @@ export function SignIn(props:any){
                     fullWidth
                     required
                     id="username"
-                    label="UserName"
+                    label="邮箱/用户名"
                     name="username"
-                    autoComplete="innermost.username"
+                    type="username"
+                    autoComplete="username"
                     value={userName}
                     onChange={(e)=>setUserName(e.target.value)}
                 />
@@ -80,12 +91,17 @@ export function SignIn(props:any){
                     required
                     fullWidth
                     name="password"
-                    label="Password"
+                    label="密码"
                     type="password"
                     id="password"
                     autoComplete="current-password"
                     value={password}
                     onChange={(e)=>setPassword(e.target.value)}
+                    onKeyDown={(e)=>{
+                        if(e.key==='Enter'){
+                            loginButtonRef.current?.click();
+                        }
+                    }}
                 />
 
                 <Grid container>
@@ -98,18 +114,20 @@ export function SignIn(props:any){
                 </Grid>
                 <FormControlLabel
                     id="rememberMe"
-                    control={<Checkbox value="remember" color="primary" />}
+                    control={<Checkbox checked={rememberMe} value="remember" color="primary" onChange={(e)=>{setRememberMe(e.target.checked)}}/>}
                     label="记住我"
                 />
 
                 <LoadingButton
                     fullWidth 
+                    ref={loginButtonRef}
                     variant="outlined" 
                     loading={loading}
                     onClick={login}
                     sx={{
                     fontWeight:'bold'
-                }}>
+                    }}
+                >
                     登录
                 </LoadingButton>
             </Box>

@@ -1,16 +1,36 @@
+import { HubConnection } from "@microsoft/signalr";
 import { Add, ArrowBackIosNew, Search } from "@mui/icons-material";
 import { Avatar, Badge, Button, CardActionArea, Container, Dialog, DialogContent, Divider, Grid, IconButton, InputBase, List, Menu, Paper, Typography } from "@mui/material";
-import { PageHeader } from "antd";
+import { message, PageHeader, Tag } from "antd";
+import { User } from "oidc-client";
 import { createRef, useEffect, useRef, useState } from "react";
+import { RootStateOrAny, useSelector } from "react-redux";
+import { SignalRContext } from "../../pages/innermost.meet/MeetPage";
+import { getChattingRecordsAsync } from "../../services/apiServices/meet/chattingcontext";
+import { getConfidantRequestsAsync, getConfidantsAsync, setConfidantRequestStatue } from "../../services/apiServices/meet/socialcontact";
 import { statueEmojiDictionary,statueChineseDictionary } from "../../services/statueServices";
-import {getFormatedLocationTime} from "../../services/timeServices";
-import { ErrorColor, GuiJiBlue, SubTitleColor, SunSetOrigin, WindowsBlue } from "../../themes/InnermostColor";
+import {formatJsonTime, getFormatedLocationTime} from "../../services/timeServices";
+import { ErrorColor, GuiJiBlue, randomInternalTagColor, SubTitleColor, SunSetOrigin, WindowsBlue } from "../../themes/InnermostColor";
+import { ChattingRecord, Confidant, ConfidantRequest } from "./MeetTypes";
 
 
 
-export default function ConfidantsBar(props:any){
-    const [confidants, setConfidants] = useState(null);
+export default function ConfidantsBar(props:{
+    confidants:Confidant[],
+    setConfidants:React.Dispatch<React.SetStateAction<Confidant[]>>,
+    chatHub:HubConnection,
+    notReceivedMessageUsers:Set<string>,
+}){
+    let user:User=useSelector((state:RootStateOrAny|null)=>state.auth.user);
 
+    useEffect(() => {
+        if(user===null){
+            return;
+        }
+        getConfidantsAsync().then((confidants)=>{
+            props.setConfidants(confidants);
+        });
+    }, [user])
 
     return(
         <Grid item p={1} height='93vh' bgcolor='#1F1F1F'>
@@ -22,9 +42,9 @@ export default function ConfidantsBar(props:any){
             </Typography>
             <Divider/>
             <ConfidantsBarSearchBar/>
-            <ConfidantsBarConfidantRequestButton/>
+            <ConfidantsBarConfidantRequestButton setConfidants={props.setConfidants}/>
             <Divider sx={{mt:1}} />
-            <ConfidantsBarConfidantsList/>
+            <ConfidantsBarConfidantsList confidants={props.confidants} signInUser={user} chatHub={props.chatHub} notReceivedMessageUsers={props.notReceivedMessageUsers}/>
         </Grid>
     )
 }
@@ -46,23 +66,11 @@ function ConfidantsBarSearchBar(props:any){
     )
 }
 
-interface ConfidantRequest{
-    requestId:string;
-    requestUserId:string;
-    requestUserName:string;
-    requestUserNickName:string;
-    requestUserAvatarUrl:string;
-    requestMessage:string;
-    confidantRequestStatue:string;
-    requestTime:string;
-}
-
-function ConfidantsBarConfidantRequestButton(props:any){
+function ConfidantsBarConfidantRequestButton(props:{
+    setConfidants:React.Dispatch<React.SetStateAction<Confidant[]>>,
+}){
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const [confidantRequestAnchorEl,setConfidantRequestAnchorEl]= useState<null | HTMLElement>(null);
-    const handleOpenMenuByAnchorEl = (el:null | HTMLElement) => {
-        setAnchorEl(el);
-    };
     const handleOpenMenu = (event: React.MouseEvent<HTMLElement>) => {
         setAnchorEl(event.currentTarget);
         if(confidantRequestAnchorEl===null){
@@ -72,34 +80,73 @@ function ConfidantsBarConfidantRequestButton(props:any){
     const handleCloseMenu = () => {
         setAnchorEl(null);
     };
-    const [confidantReqeusts, setConfidantReqeusts] = useState<Array<ConfidantRequest>>([
-        {
-            requestId:"abc",
-            requestUserId:"abbbbb",
-            requestUserName:"HongJieSun",
-            requestUserNickName:"HongJieSunnn",
-            requestUserAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fimg1.doubanio.com%2Fview%2Fgroup_topic%2Fl%2Fpublic%2Fp481381138.jpg&refer=http%3A%2F%2Fimg1.doubanio.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654138013&t=c7872fe0f04a6a3194c6fe5c6d9508ab",
-            requestMessage:"我很喜欢你的这句话：天空仍灿烂，它爱着大海，情歌被打败，爱已不存在！！！！！！！！！！！！",
-            confidantRequestStatue:"ToBeReviewed",
-            requestTime:"2022-05-03T11:00:00"
-        },
-        {
-            requestId:"abc",
-            requestUserId:"abbbbb",
-            requestUserName:"HongJieSun",
-            requestUserNickName:"HongJieSunnn",
-            requestUserAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fimg1.doubanio.com%2Fview%2Fgroup_topic%2Fl%2Fpublic%2Fp481381138.jpg&refer=http%3A%2F%2Fimg1.doubanio.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654138013&t=c7872fe0f04a6a3194c6fe5c6d9508ab",
-            requestMessage:"我很喜欢你的这句话：天空仍灿烂，它爱着大海，情歌被打败，爱已不存在！！！！！！！！！！！！",
-            confidantRequestStatue:"ToBeReviewed",
-            requestTime:"2022-05-03T11:00:00"
-        }
-    ]);
+    const [confidantReqeusts, setConfidantReqeusts] = useState<Array<ConfidantRequest>>([]);
 
     const [accepted, setAccepted] = useState(confidantReqeusts.map((r,i)=>false));
     const [refused, setRefused] = useState(confidantReqeusts.map((r,i)=>false));
 
+    useEffect(() => {
+        getConfidantRequestsAsync().then((requests)=>{
+            setConfidantReqeusts(requests);
+        });
+    }, [])
 
-    function ConfidantsBarConfidantRequestMenu(props:any){
+    function ConfidantsBarConfidantRequestMenu(props:{
+        setConfidants:React.Dispatch<React.SetStateAction<Confidant[]>>,
+        transformOrigin?:any,
+        anchorOrigin?:any,
+    }){
+
+        const handlePassButtonClick=async(i:number)=>{
+            let confidantReqeust=confidantReqeusts[i];
+
+            let ans=await setConfidantRequestStatue({
+                confidantRequestId:confidantReqeust.requestId,
+                requestUserId:confidantReqeust.requestUserId,
+                confidantRequestStatue:{
+                    id:2,
+                    name:"Passed",
+                }
+            });
+
+            if(ans===false){
+                message.error("同意好友请求状态失败");
+                return;
+            }else{
+                message.success(ans);
+            }
+
+            let copyAccepted=[...accepted];
+            copyAccepted[i]=true;
+            setAccepted(copyAccepted);
+            //refresh confidants list.
+            getConfidantsAsync().then((confidants)=>{
+                props.setConfidants(confidants);
+            })
+        }
+
+        const handleRefuseButtonClick=async(i:number)=>{
+            let confidantReqeust=confidantReqeusts[i];
+            let ans=await setConfidantRequestStatue({
+                confidantRequestId:confidantReqeust.requestId,
+                requestUserId:confidantReqeust.requestUserId,
+                confidantRequestStatue:{
+                    id:3,
+                    name:"Refused",
+                }
+            });
+
+            if(ans===false){
+                message.error("拒绝好友请求状态失败");
+                return;
+            }else{
+                message.success(ans);
+            }
+
+            let copyRefused=[...refused];
+            copyRefused[i]=true;
+            setRefused(copyRefused);
+        }
         return(
             <Menu
                 id="menu-confidant-request"
@@ -146,19 +193,10 @@ function ConfidantsBarConfidantRequestButton(props:any){
                                 </Grid>
                                 <Grid container item xs={12} spacing={1}>
                                     <Grid item xs={6}>
-                                        <Button disabled={accepted[i]||refused[i]} fullWidth onClick={()=>{
-                                            let copyAccepted=[...accepted];
-                                            copyAccepted[i]=true;
-                                            setAccepted(copyAccepted);
-                                            
-                                        }}>{accepted[i]?'已同意':'同意'}</Button>
+                                        <Button disabled={accepted[i]||refused[i]} fullWidth onClick={()=>handlePassButtonClick(i)}>{accepted[i]?'已同意':'同意'}</Button>
                                     </Grid>
                                     <Grid item xs={6}>
-                                        <Button disabled={accepted[i]||refused[i]} fullWidth color="error" onClick={()=>{
-                                            let copyRefused=[...refused];
-                                            copyRefused[i]=true;
-                                            setRefused(copyRefused);
-                                        }}>{refused[i]?'已拒绝':'拒绝'}</Button>
+                                        <Button disabled={accepted[i]||refused[i]} fullWidth color="error" onClick={()=>handleRefuseButtonClick(i)}>{refused[i]?'已拒绝':'拒绝'}</Button>
                                     </Grid>
                                 </Grid>
                             </Grid>
@@ -189,172 +227,61 @@ function ConfidantsBarConfidantRequestButton(props:any){
                 好友请求
             </Button>
 
-            <ConfidantsBarConfidantRequestMenu/>
+            <ConfidantsBarConfidantRequestMenu setConfidants={props.setConfidants}/>
         </Grid>
     )
 }
 
-interface Confidant{
-    confidantUserId:string;
-    confidantUserName:string;
-    confidantUserNickName:string;
-    confidantAvatarUrl:string;
-    confidantOnline:boolean;
-    confidantStatue:string;
-    chattingContextId:string;
-}
-
-function ConfidantsBarConfidantsList(props:any){
-    const [confidants, setConfidants] = useState<Array<Confidant>>([
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66",
-            confidantOnline:true,
-            confidantStatue:'NORMAL',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66",
-            confidantOnline:true,
-            confidantStatue:'DEPRESSION',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=4290186543,3036482172&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=498",
-            confidantOnline:false,
-            confidantStatue:'ANGRY',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66",
-            confidantOnline:true,
-            confidantStatue:'NORMAL',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=3738084969,8623396&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
-            confidantOnline:true,
-            confidantStatue:'DEPRESSION',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=4290186543,3036482172&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=498",
-            confidantOnline:false,
-            confidantStatue:'ANGRY',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66",
-            confidantOnline:true,
-            confidantStatue:'NORMAL',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=3738084969,8623396&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
-            confidantOnline:true,
-            confidantStatue:'DEPRESSION',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=4290186543,3036482172&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=498",
-            confidantOnline:false,
-            confidantStatue:'ANGRY',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66",
-            confidantOnline:true,
-            confidantStatue:'NORMAL',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnnnnnnnnnnnnnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=3738084969,8623396&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=500",
-            confidantOnline:true,
-            confidantStatue:'DEPRESSION',
-            chattingContextId:'abcd'
-        },
-        {
-            confidantUserId:"abc",
-            confidantUserName:"HongJieSun",
-            confidantUserNickName:"HongJieSunnn",
-            confidantAvatarUrl:"https://img2.baidu.com/it/u=4290186543,3036482172&fm=253&fmt=auto&app=138&f=JPEG?w=500&h=498",
-            confidantOnline:false,
-            confidantStatue:'ANGRY',
-            chattingContextId:'abcd'
-        },
-    ]);
-
+function ConfidantsBarConfidantsList(props:{
+    confidants:Array<Confidant>,
+    signInUser:User,
+    chatHub:HubConnection,
+    notReceivedMessageUsers:Set<string>,
+}){
     const [openChattingContent, setOpenChattingContent] = useState(false);
-    const [openChattingContextId, setOpenChattingContextId] = useState("");
-    const [openChattingContextConfidantAvatarUrl, setOpenChattingContextConfidantAvatarUrl] = useState("");
-    const handleChattingContentOpen=(chattingContextId:string,openChattingContextConfidantAvatarUrl:string)=>{
-        setOpenChattingContextId(chattingContextId);
-        setOpenChattingContextConfidantAvatarUrl(openChattingContextConfidantAvatarUrl);
+    const [openChattingContextConfidant, setOpenChattingContextConfidant] = useState<Confidant>();
+    const handleChattingContentOpen=async (openChattingContextConfidant:Confidant)=>{
+        
+        setOpenChattingContextConfidant(openChattingContextConfidant);
         setOpenChattingContent(true);
     }
     const handleChattingContentClose=()=>{
         setOpenChattingContent(false);
     }
-    return confidants.length===0?(
+    
+    return props.confidants.length===0?(
         <Grid mt={5} container justifyContent='center'>
             <Typography>
-                抱歉，您还没有好友
-            </Typography>
-
-            <Typography variant="caption" color={SubTitleColor}>
-                🙂请找寻那位与您内心相匹配的知己
+                ☹️抱歉，加载失败了
             </Typography>
         </Grid>
     ):(
         <List id={'confidantslist'} dense component="div" role="list" sx={{height: '75%',overflow: 'auto'}}>
-            {confidants.map((c,i)=>(
+            {props.confidants.map((c,i)=>(
                 <CardActionArea 
                     key={i} 
                     sx={{mt:1,border:2,borderRadius:2,borderColor:c.confidantOnline?'#FF6233':'#666666'}} 
-                    onClick={()=>handleChattingContentOpen(c.chattingContextId,c.confidantAvatarUrl)}
+                    onClick={()=>handleChattingContentOpen(c)}
                 >
                     <Grid container>
                         <Grid item xs={3}>
-                        <Badge
-                            overlap="circular"
-                            anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                            badgeContent={
-                                statueEmojiDictionary[c.confidantStatue]
-                            }
+                        <Badge 
+                            //if while we connect to chatHub,there contains not received message,add dot badge to confidant
+                            invisible={!props.notReceivedMessageUsers.has(c.confidantUserId)}
+                            overlap="circular" 
+                            color="error" 
+                            variant="dot" 
+                            anchorOrigin={{ vertical: 'top', horizontal: 'left' }}
                         >
-                            <Avatar variant="rounded" src={c.confidantAvatarUrl} sx={{width:50,height:50}}></Avatar>
+                            <Badge
+                                overlap="circular"
+                                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                                badgeContent={
+                                    statueEmojiDictionary[c.confidantStatue]
+                                }
+                            >
+                                <Avatar variant="rounded" src={c.confidantAvatarUrl} sx={{width:50,height:50}}></Avatar>
+                            </Badge>
                         </Badge>
                         </Grid>
                         <Grid item xs={9}>
@@ -368,20 +295,36 @@ function ConfidantsBarConfidantsList(props:any){
                     </Grid>
                 </CardActionArea>
             ))}
-            <ConfidantChattingContext open={openChattingContent} handleClose={handleChattingContentClose} chattingContextId={openChattingContextId} confidantAvatarUrl={openChattingContextConfidantAvatarUrl}/>
+            <ConfidantChattingContext 
+                open={openChattingContent} 
+                handleClose={handleChattingContentClose} 
+                confidant={openChattingContextConfidant}
+                signInUser={props.signInUser}
+                chatHub={props.chatHub}
+            />
         </List>
     )
 }
 
-interface ChattingRecord{
-    chattingRecordId?:string;
-    sendUserId:string;
-    recordMessage:string;
-    tagSummaries?:{tagId:string,tagName:string}[];
-    createTime?:string;
-}
+function ConfidantChattingContext(props:{
+    open:boolean,
+    handleClose:()=>void,
+    confidant:Confidant|undefined,
+    signInUser:User,
+    chatHub:HubConnection,
+}){
+    const [chattingRecords, setChattingRecords] = useState<Array<ChattingRecord>>([]);
+    useEffect(() => {
+        if(props.signInUser===null){
+            return;
+        }
+        if(props.open===true){
+            getChattingRecordsAsync(props.confidant?.chattingContextId).then((chattingRecords)=>{
+                setChattingRecords(chattingRecords);
+            });
+        }
+    }, [props.open,props.signInUser])
 
-function ConfidantChattingContext(props:any){
     function ConfidantChattingContextHeader(props:any){
         return(
             <PageHeader
@@ -390,38 +333,27 @@ function ConfidantChattingContext(props:any){
                 onBack={()=>{props.handleClose()}}
                 backIcon={<ArrowBackIosNew/>}
                 tags={[
-                    
+                    <Tag key={1} color={randomInternalTagColor()}>{statueEmojiDictionary[props.confidantStatue]}</Tag>
                 ]}
                 extra={[
                     
                 ]}
-                
             >
     
             </PageHeader>
         )
     }
 
-    function ConfidantChattingContextContent(props:any){
-        const signinUserId="b";
-        const signinUserAvatarUrl="https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fci.xiaohongshu.com%2F1af51b3d-1bf3-f838-1c77-5fe5e31fc4e9%3FimageView2%2F2%2Fw%2F1080%2Fformat%2Fjpg&refer=http%3A%2F%2Fci.xiaohongshu.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=auto?sec=1654142333&t=44f0e658bc5697ba7e7cdbb59e1b4c66";
-        const confidantAvatarUrl=props.confidantAvatarUrl;
+    function ConfidantChattingContextContent(props:{
+        confidant:Confidant|undefined,
+        signInUser:User,
+        chatHub:HubConnection,
+    }){
+        const signinUserId=props.signInUser.profile.sub;
+        const signinUserAvatarUrl=props.signInUser.profile.avatarimg;
+        const confidantAvatarUrl=props.confidant!.confidantAvatarUrl;
     
         const chattingListContentRef = createRef<HTMLDivElement>();
-        const [chattingRecords, setChattingRecords] = useState<Array<ChattingRecord>>([
-            {
-                chattingRecordId:"abc",
-                sendUserId:"a",
-                recordMessage:"多少春秋风雨该多少崎岖不变爱多少唏嘘的你在人海",
-                createTime:"2022-05-23 14:55:00"
-            },
-            {
-                chattingRecordId:"abc",
-                sendUserId:"b",
-                recordMessage:"二手摩托尾气臭黑痞老板的电脑老婆凯伦用量子技术弄出了分子超黑超略吧热狗破解RSA加密算法，使瑜典二手摩托启动量子纠缠特性，导致我放在家里的麻辣火锅底料量子衰变成为番茄火锅底料，随后被我煮掉吃了并被量子衰变给影响，从而导致我代码写不出来去扫厕所，偶然发现马桶蓝月亮的蓝色很漂亮，于是骑车来到海边导致腿好酸，吃了碗拌面清汤忘记放醋，结果猪油太油，使拌面表面产生超滑平面，使空气里的一个中子一不小心滑倒了而引起了链式反应时空扭曲，使我自行车被吞没最终找不到女朋友",
-                createTime:"2022-05-23 14:55:01"
-            },
-        ]);
         const [sendingMessage, setSendingMessage] = useState("");
         const [sendingBarPlaceholder, setSendingBarPlaceholder] = useState("请输入...");
         const [sendingBarColor, setSendingBarColor] = useState(WindowsBlue);
@@ -433,7 +365,7 @@ function ConfidantChattingContext(props:any){
             }
         }
 
-        const handleSendButtonClick=()=>{
+        const handleSendButtonClick=async()=>{
             if(sendingMessage===undefined||sendingMessage===""||sendingMessage===null){
                 setSendingBarColor(ErrorColor);
                 setSendingBarPlaceholder("您还没输入呢");
@@ -444,28 +376,62 @@ function ConfidantChattingContext(props:any){
                 return;
             }
             
-            setChattingRecords(chattingRecords.concat({
+            try {
+                //await props.chatHub.send("SendMessageToUser",props.confidant?.confidantUserId,props.confidant?.chattingContextId,sendingMessage);
+                SignalRContext.invoke("SendMessageToUser",props.confidant?.confidantUserId,props.confidant?.chattingContextId,sendingMessage);
+            } catch (error) {
+                let message=sendingMessage;
+                setSendingBarColor(ErrorColor);
+                setSendingMessage("发送失败");
+                setTimeout(() => {
+                    setSendingMessage(message);
+                }, 800);
+                return;
+            }
+
+            setChattingRecords([...chattingRecords, {
+                chattingRecordId:props.confidant?.chattingContextId,
                 sendUserId:signinUserId,
                 recordMessage:sendingMessage,
+                tagSummaries:[],
                 createTime:getFormatedLocationTime()
-            }));
+            }]);
             setSendingMessage("");
         }
 
         const handleSendingMessageChange=(e:React.ChangeEvent<HTMLTextAreaElement | HTMLInputElement>)=>{
             setSendingMessage(e.target.value);
         }
-
+        
+        //props.chatHub.on not work i don't know why.
+        SignalRContext.useSignalREffect(
+            "ChattingMessage",
+            (chattingRecord) => {
+                setChattingRecords([...chattingRecords, chattingRecord]);
+                const domNode = chattingListContentRef.current;
+                if (domNode) {
+                    domNode.scrollTop = domNode.scrollHeight;
+                }
+            },
+            [chattingRecords],
+        );                                                                                                                         
+        
         useEffect(() => {
             const domNode = chattingListContentRef.current;
             if (domNode) {
                 domNode.scrollTop = domNode.scrollHeight;
             }
-        }, [chattingRecords])
+        }, [])//chattingRecord changes,scroll to bottom
+        
     
         return(
             <DialogContent>
                 <List ref={chattingListContentRef} id={'chattingrecordcontent'} dense component="div" role="list" sx={{overflow: 'auto',height:450,backgroundColor:"#161616",borderRadius:2,border:3,borderColor:WindowsBlue}}>
+                    <Grid container item justifyContent='center'>
+                        <Typography variant="caption" color={SubTitleColor}>
+                            暂时只展示最近50条消息
+                        </Typography>
+                    </Grid>
                     {chattingRecords.map((cr,i)=>{
                         return cr.sendUserId===signinUserId?(
                             <Grid key={i} container p={1} spacing={1} justifyContent='right'>
@@ -478,7 +444,7 @@ function ConfidantChattingContext(props:any){
                                         </Grid>
                                         <Grid item container justifyContent={'right'}>
                                             <Typography fontSize={1} fontFamily={"Cascadia Code"}>
-                                                {cr.createTime}
+                                                {formatJsonTime(cr.createTime!)}
                                             </Typography>
                                         </Grid>
                                     </Paper>
@@ -499,7 +465,7 @@ function ConfidantChattingContext(props:any){
                                         </Typography>
                                         <Grid item>
                                             <Typography fontSize={1} fontFamily={"Cascadia Code"}>
-                                                {cr.createTime}
+                                                {formatJsonTime(cr.createTime!)}
                                             </Typography>
                                         </Grid>
                                     </Paper>
@@ -542,6 +508,7 @@ function ConfidantChattingContext(props:any){
             PaperProps={{
                 elevation:0,
                 sx:{
+                    borderRadius:2,
                 }
             }}
             BackdropProps={{
@@ -551,9 +518,14 @@ function ConfidantChattingContext(props:any){
             }}
             onClose={props.handleClose}
         >
-            <ConfidantChattingContextHeader userNickName='HongJieSunnn' userName='HongJieSun' handleClose={props.handleClose} />
+            <ConfidantChattingContextHeader 
+                userNickName={props.confidant?.confidantUserNickName} 
+                userName={props.confidant?.confidantUserName} 
+                handleClose={props.handleClose}
+                confidantStatue={props.confidant?.confidantStatue}
+            />
             <Divider variant="middle" sx={{marginTop:2,marginBottom:1}}/>
-            <ConfidantChattingContextContent confidantAvatarUrl={props.confidantAvatarUrl} />
+            <ConfidantChattingContextContent confidant={props.confidant} signInUser={props.signInUser} chatHub={props.chatHub}/>
         </Dialog>
     )
 }

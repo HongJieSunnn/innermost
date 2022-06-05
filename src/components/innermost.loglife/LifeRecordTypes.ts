@@ -54,3 +54,18 @@ export interface LifeRecordCommand{
     createTime?:string;
     tagSummaries?:{[index:string]:string};
 }
+
+export interface RecommendedMusicRecord{
+    mid:string,
+    musicName:string,
+    musicAlbum:string,
+    musicSinger:string,
+    musicCoverUrl:string,
+}
+
+export interface DailyPicture{
+    title:string,
+    pictureUrl:string,
+    copyright:string,
+    copyrightLink:string,
+}

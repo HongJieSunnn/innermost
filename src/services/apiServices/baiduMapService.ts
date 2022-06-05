@@ -1,4 +1,5 @@
 import axios from "axios";
+import { cities } from "../../components/innermost.search/LocationSearch";
 const jsonpAdapter = require("axios-jsonp");
 
 export interface LocationModel{
@@ -26,7 +27,11 @@ export async function locateByIP(props:any){
         })
         .then((data)=>{
             props.setProvince(data.content.address_detail.province);
-            props.setCity(data.content.address_detail.city);
+            if(data.content.address_detail.city!=""){
+                props.setCity(data.content.address_detail.city);
+            }else{
+                props.setCity(cities[data.content.address_detail.province][0]);
+            }
         })
 }
 
