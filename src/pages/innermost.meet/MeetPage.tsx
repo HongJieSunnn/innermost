@@ -23,10 +23,12 @@ window.onbeforeunload=()=>{
 
 export default function MeetPage(props:any){
     let user:User=useSelector((state:RootStateOrAny|null)=>state.auth.user);
+
     useEffect(() => {
         if(user===null){
             return;
         }
+
         return () => {
             SignalRContext.connection?.stop();
         }

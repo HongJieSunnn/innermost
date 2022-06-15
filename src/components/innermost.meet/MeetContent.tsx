@@ -5,6 +5,7 @@ import { message, PageHeader, Tag } from "antd";
 import { User } from "oidc-client";
 import { createRef, useEffect, useState } from "react";
 import { RootStateOrAny, useSelector } from "react-redux";
+import { SignalRContext } from "../../pages/innermost.meet/MeetPage";
 import { getRandomSharedLifeRecordsAsync } from "../../services/apiServices/meet/sharedliferecord";
 import { getConfidantRequestsAsync, getConfidantsAsync } from "../../services/apiServices/meet/socialcontact";
 import { statueChineseDictionary, statueEmojiDictionary } from "../../services/statueServices";
@@ -32,28 +33,35 @@ export const initShredLifeRecord:SharedLifeRecord={
 
 export default function MeetContent(props:{
     user:User,
-    chatHub:HubConnection,
 }){
     const [confidants, setConfidants] = useState<Array<Confidant>>([])
-    const [notReceivedMessageUsers, setNotReceivedMessageUsers] = useState<Set<string>>(new Set<string>());
+    const [notReceivedMessageUsers, setNotReceivedMessageUsers] = useState<Array<string>>(new Array<string>());
+
+    SignalRContext.useSignalREffect(
+        "NotReceviedChattingMessage",
+        (chattingRecord) => {
+            setNotReceivedMessageUsers(notReceivedMessageUsers.concat(chattingRecord.sendUserId));
+        },
+        [notReceivedMessageUsers],
+    );
 
     useEffect(() => {
         if(props.user===null){
             return;
         }
-        props.chatHub.on("ChattingMessage",(chattingRecord:ChattingRecord)=>{
-            setNotReceivedMessageUsers(notReceivedMessageUsers.add(chattingRecord.sendUserId));
-        });
-      
     }, [])
-    
 
     return props.user===null?(
         <NotSignIn/>
     ):(
         <Grid container columnSpacing={1}>
             <Grid item xl={2} display={{xs:'none',xl:'block'}}>
-                <ConfidantsBar confidants={confidants} setConfidants={setConfidants} chatHub={props.chatHub} notReceivedMessageUsers={notReceivedMessageUsers}/>
+                <ConfidantsBar 
+                    confidants={confidants} 
+                    setConfidants={setConfidants} 
+                    notReceivedMessageUsers={notReceivedMessageUsers} 
+                    setNotReceivedMessageUsers={setNotReceivedMessageUsers}
+                />
             </Grid>
 
             <Grid item xs={12} xl={8} borderLeft={1} borderRight={1} borderColor="#2B2B2B" pr={1}> {/*spacing 1 will pl 1 */}

@@ -139,12 +139,11 @@ function AddConfidantRequestDialog(props:{
     const [requestMessage, setRequestMessage] = useState("");
 
     const handleAddConfidantDialogConfirmButtonClick=async ()=>{
+        handleClose();
         let addResult=await addConfidantRequest({
             toUserId:props.sharedLifeRecord!.userId,
             requestMessage:requestMessage,
         });
-
-        handleClose();
 
         if(addResult!=="发送添加好友请求失败"){
             message.success(addResult);

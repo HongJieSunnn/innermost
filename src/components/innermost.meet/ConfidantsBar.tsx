@@ -18,8 +18,8 @@ import { ChattingRecord, Confidant, ConfidantRequest } from "./MeetTypes";
 export default function ConfidantsBar(props:{
     confidants:Confidant[],
     setConfidants:React.Dispatch<React.SetStateAction<Confidant[]>>,
-    chatHub:HubConnection,
-    notReceivedMessageUsers:Set<string>,
+    notReceivedMessageUsers:Array<string>,
+    setNotReceivedMessageUsers:React.Dispatch<React.SetStateAction<string[]>>,
 }){
     let user:User=useSelector((state:RootStateOrAny|null)=>state.auth.user);
 
@@ -44,7 +44,12 @@ export default function ConfidantsBar(props:{
             <ConfidantsBarSearchBar/>
             <ConfidantsBarConfidantRequestButton setConfidants={props.setConfidants}/>
             <Divider sx={{mt:1}} />
-            <ConfidantsBarConfidantsList confidants={props.confidants} signInUser={user} chatHub={props.chatHub} notReceivedMessageUsers={props.notReceivedMessageUsers}/>
+            <ConfidantsBarConfidantsList 
+                confidants={props.confidants} 
+                signInUser={user} 
+                notReceivedMessageUsers={props.notReceivedMessageUsers} 
+                setNotReceivedMessageUsers={props.setNotReceivedMessageUsers}
+            />
         </Grid>
     )
 }
@@ -235,13 +240,13 @@ function ConfidantsBarConfidantRequestButton(props:{
 function ConfidantsBarConfidantsList(props:{
     confidants:Array<Confidant>,
     signInUser:User,
-    chatHub:HubConnection,
-    notReceivedMessageUsers:Set<string>,
+    notReceivedMessageUsers:Array<string>,
+    setNotReceivedMessageUsers:React.Dispatch<React.SetStateAction<string[]>>,
 }){
     const [openChattingContent, setOpenChattingContent] = useState(false);
     const [openChattingContextConfidant, setOpenChattingContextConfidant] = useState<Confidant>();
     const handleChattingContentOpen=async (openChattingContextConfidant:Confidant)=>{
-        
+        props.setNotReceivedMessageUsers(props.notReceivedMessageUsers.filter(u=>u!==openChattingContextConfidant.confidantUserId))
         setOpenChattingContextConfidant(openChattingContextConfidant);
         setOpenChattingContent(true);
     }
@@ -267,7 +272,7 @@ function ConfidantsBarConfidantsList(props:{
                         <Grid item xs={3}>
                         <Badge 
                             //if while we connect to chatHub,there contains not received message,add dot badge to confidant
-                            invisible={!props.notReceivedMessageUsers.has(c.confidantUserId)}
+                            invisible={props.notReceivedMessageUsers.indexOf(c.confidantUserId)<0}
                             overlap="circular" 
                             color="error" 
                             variant="dot" 
@@ -300,7 +305,6 @@ function ConfidantsBarConfidantsList(props:{
                 handleClose={handleChattingContentClose} 
                 confidant={openChattingContextConfidant}
                 signInUser={props.signInUser}
-                chatHub={props.chatHub}
             />
         </List>
     )
@@ -311,7 +315,6 @@ function ConfidantChattingContext(props:{
     handleClose:()=>void,
     confidant:Confidant|undefined,
     signInUser:User,
-    chatHub:HubConnection,
 }){
     const [chattingRecords, setChattingRecords] = useState<Array<ChattingRecord>>([]);
     useEffect(() => {
@@ -347,7 +350,6 @@ function ConfidantChattingContext(props:{
     function ConfidantChattingContextContent(props:{
         confidant:Confidant|undefined,
         signInUser:User,
-        chatHub:HubConnection,
     }){
         const signinUserId=props.signInUser.profile.sub;
         const signinUserAvatarUrl=props.signInUser.profile.avatarimg;
@@ -407,6 +409,8 @@ function ConfidantChattingContext(props:{
         SignalRContext.useSignalREffect(
             "ChattingMessage",
             (chattingRecord) => {
+                console.log("abc");
+                
                 setChattingRecords([...chattingRecords, chattingRecord]);
                 const domNode = chattingListContentRef.current;
                 if (domNode) {
@@ -525,7 +529,7 @@ function ConfidantChattingContext(props:{
                 confidantStatue={props.confidant?.confidantStatue}
             />
             <Divider variant="middle" sx={{marginTop:2,marginBottom:1}}/>
-            <ConfidantChattingContextContent confidant={props.confidant} signInUser={props.signInUser} chatHub={props.chatHub}/>
+            <ConfidantChattingContextContent confidant={props.confidant} signInUser={props.signInUser}/>
         </Dialog>
     )
 }
